@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pele と Mermaid.js の比較 | PoC Lab</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="back" href="../">← PoC一覧</a>
+    <h1>Pele と Mermaid.js の比較</h1>
+    <p class="versions" id="versions">バージョン情報を読み込み中…</p>
+  </header>
+
+  <section class="controls" aria-label="操作">
+    <label>サンプル
+      <select id="sample"></select>
+    </label>
+    <label>表示幅
+      <select id="frame-width">
+        <option value="">ペイン幅に合わせる</option>
+        <option value="1024">1024px</option>
+        <option value="768">768px</option>
+        <option value="480">480px</option>
+        <option value="360">360px</option>
+      </select>
+    </label>
+    <label>フォント
+      <select id="font">
+        <option value="ja">日本語フォントを列挙（Mac/Win/Linux）</option>
+        <option value="windows">Windows向け（Yu Gothic UI, Meiryo）</option>
+        <option value="generic">sans-serif のみ</option>
+      </select>
+    </label>
+    <label>ウォームアップ
+      <input id="warmup" type="number" min="0" max="50" value="3">回
+    </label>
+    <label>計測
+      <input id="runs" type="number" min="1" max="200" value="10">回
+    </label>
+    <label title="初めて描画する図に近い条件で計測します">
+      <input id="cold-text" type="checkbox">Pele の文字幅キャッシュを毎回破棄
+    </label>
+    <button id="bench" type="button">描画時間を計測</button>
+    <span id="bench-status" class="bench-status" role="status"></span>
+  </section>
+
+  <section class="editor" aria-label="Mermaid記法の入力">
+    <label for="source" class="editor-label">Mermaid記法（入力後に自動で再描画します）</label>
+    <textarea id="source" spellcheck="false" rows="10"></textarea>
+  </section>
+
+  <p class="summary" id="summary" role="status"></p>
+
+  <main class="compare">
+    <section class="pane" id="pane-pele" data-engine="pele" aria-label="Pele">
+      <header class="pane-header">
+        <h2>Pele <span class="ver" data-field="version"></span></h2>
+        <span class="badge" data-field="status">待機中</span>
+      </header>
+      <dl class="metrics">
+        <dt>読込+評価</dt><dd data-field="load">—</dd>
+        <dt>初期化</dt><dd data-field="init">—</dd>
+        <dt>初回描画</dt><dd data-field="first">—</dd>
+        <dt>直近の描画</dt><dd data-field="last">—</dd>
+        <dt>計測（中央値）</dt><dd data-field="median">—</dd>
+        <dt>計測（最小 / 最大）</dt><dd data-field="range">—</dd>
+        <dt>図の種別</dt><dd data-field="type">—</dd>
+        <dt>SVG</dt><dd data-field="svg">—</dd>
+      </dl>
+      <pre class="error" data-field="error" hidden></pre>
+      <div class="viewport"><div class="frame" data-field="frame"></div></div>
+    </section>
+
+    <section class="pane" id="pane-mermaid" data-engine="mermaid" aria-label="Mermaid.js">
+      <header class="pane-header">
+        <h2>Mermaid.js <span class="ver" data-field="version"></span></h2>
+        <span class="badge" data-field="status">待機中</span>
+      </header>
+      <dl class="metrics">
+        <dt>読込+評価</dt><dd data-field="load">—</dd>
+        <dt>初期化</dt><dd data-field="init">—</dd>
+        <dt>初回描画</dt><dd data-field="first">—</dd>
+        <dt>直近の描画</dt><dd data-field="last">—</dd>
+        <dt>計測（中央値）</dt><dd data-field="median">—</dd>
+        <dt>計測（最小 / 最大）</dt><dd data-field="range">—</dd>
+        <dt>図の種別</dt><dd data-field="type">—</dd>
+        <dt>SVG</dt><dd data-field="svg">—</dd>
+      </dl>
+      <pre class="error" data-field="error" hidden></pre>
+      <div class="viewport"><div class="frame" data-field="frame"></div></div>
+    </section>
+  </main>
+
+  <details class="notes">
+    <summary>計測値の見方</summary>
+    <ul>
+      <li><b>読込+評価</b>: ライブラリのスクリプト取得から実行完了まで（ページ表示時に1回、Pele → Mermaid の順に逐次読込）。</li>
+      <li><b>初期化</b>: Mermaid は <code>mermaid.initialize()</code> の所要時間。Pele は初期化APIがなく、読込時に図種別の登録が完了するため「不要」。</li>
+      <li><b>初回描画</b>: 読込後、最初の図を描画したときの時間（キャッシュ未作成・遅延初期化を含む）。</li>
+      <li><b>直近の描画</b>: 入力変更時の1回分の描画（解析・レイアウト・DOM反映）。ウォームアップしていない参考値です。</li>
+      <li><b>計測</b>: 「描画時間を計測」で、指定回数のウォームアップを捨てた後の SVG 文字列生成時間（Pele: <code>pele.render()</code>、Mermaid: <code>mermaid.render()</code>）。DOM反映は含みません。</li>
+      <li>Pele は文字列ごとの文字幅を初回に計測（<code>document.fonts.check()</code> を含む）してキャッシュするため、既定ではウォームアップ後の値はキャッシュ済みの条件です。「文字幅キャッシュを毎回破棄」を選ぶと、各回の前に <code>pele.forgetTextWidths()</code> を呼び、初めて描く図に近い条件で計測します。</li>
+      <li><b>フォント</b>: 両エンジンに同じフォント指定を渡します。Pele は未インストールのフォント名が多いと初回の文字幅計測（<code>document.fonts.check()</code>）が遅くなるため、環境に合わせて切り替えて比較してください。</li>
+      <li>表示用の Pele は <code>pele.mount()</code> を使い、コンテナ幅に合わせて再レイアウトします。Mermaid は <code>useMaxWidth</code>（既定）で縮小表示されます。</li>
+    </ul>
+  </details>
+
+  <script src="vendor/versions.js"></script>
+  <script src="samples.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
