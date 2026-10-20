@@ -1,0 +1,17 @@
+{
+  "name": "poc-lab",
+  "version": "0.0.0",
+  "private": true,
+  "description": "PoC集。各PoCは独立したフォルダに置き、GitHub Pagesへ静的ファイルとして公開する。",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "mermaid": "12.1.0",
+    "pele": "1.7.0"
+  }
+}
