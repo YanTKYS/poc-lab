@@ -4,9 +4,9 @@
 
 公開先: <https://yantkys.github.io/poc-lab/>
 
-| PoC | フォルダ | 概要 |
-| --- | --- | --- |
-| Pele と Mermaid.js の比較 | [`pele/`](pele/README.md) | 同じ Mermaid 記法を Pele と Mermaid.js で描画し、見た目・描画時間・互換性を比較する |
+| PoC | フォルダ | 概要 | 検証状況 |
+| --- | --- | --- | --- |
+| Pele と Mermaid.js の比較 | [`pele/`](pele/README.md) | 同じ Mermaid 記法を Pele と Mermaid.js で描画し、見た目・描画時間・互換性を比較する | 検証終了・採用保留 |
 
 ## 方針
 
@@ -14,6 +14,7 @@
 - 依存ライブラリは GitHub Actions のビルド時に npm から取得し、バージョンは固定する。
 - 参照はすべて相対パスで書く。GitHub Pages のサブパス（`/poc-lab/`）や IIS の任意の仮想ディレクトリにそのまま配置できるようにする。
 - 各 PoC は独立したフォルダに置き、PoC 間で共通基盤は作らない。
+- 各 PoC の検証結果と採用判断は、そのフォルダの `README.md` に残し、上の一覧に検証状況を記載する。
 
 ## 構成
 
@@ -41,7 +42,7 @@ npm test
 1. リポジトリ直下に新しいフォルダ（例: `foo/`）を作り、`index.html` を置く。参照は相対パスで書く。
 2. `scripts/build.mjs` の `POCS` にフォルダ名を追加する。npm のライブラリを使う場合は、同じスクリプトでそのフォルダの `vendor/` にコピーする処理を追加する。
 3. トップページ `index.html` の一覧にリンクを追加する。
-4. 必要に応じて `tests/` にテストを追加し、`foo/README.md` に検証内容と結果をまとめる。
+4. 必要に応じて `tests/` にテストを追加し、`foo/README.md` に検証内容・結果・採用判断をまとめ、この README の一覧の検証状況を更新する。
 
 ## デプロイ
 
