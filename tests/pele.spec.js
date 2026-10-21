@@ -50,8 +50,8 @@ test('トップページからPele比較ページへ遷移できる（サブパ�
   await expect(page).toHaveURL(`${BASE}pele/`);
   await expect(page.locator('body')).toHaveAttribute('data-ready', 'true', { timeout: 30_000 });
   await waitIdle(page);
-  await expect(page.locator('#versions')).toContainText('pele 1.7.0 / mermaid 12.1.0');
-  await expect(pane(page, 'pele').locator('[data-field="version"]')).toHaveText('v1.7.0');
+  await expect(page.locator('#versions')).toContainText('pele 1.8.0 / mermaid 12.1.0');
+  await expect(pane(page, 'pele').locator('[data-field="version"]')).toHaveText('v1.8.0');
   await expect(pane(page, 'mermaid').locator('[data-field="version"]')).toHaveText('v12.1.0');
   await page.getByRole('link', { name: 'PoC一覧' }).click();
   await expect(page).toHaveURL(BASE);
