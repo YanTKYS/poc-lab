@@ -29,9 +29,7 @@ export function summarizeStatus(status) {
   const consent = object(s.data_consent);
   const sharing = object(s.consent).sharing;
   const x = object(object(s.services).x);
-  // Balance text is not echoed. A narrowly formatted monetary value becomes a number.
-  const balance = s.purchased_balance_display;
-  const amount = typeof balance === 'string' && /^\$\d+(?:\.\d{1,6})?$/.test(balance) ? Number(balance.slice(1)) : null;
+  // Reports may be public. Purchase balances are not needed for the stop decision.
   return {
     contract_matches_sdk: s.contract_version === EXPECTED_CONTRACT_VERSION,
     stage: stages.has(s.stage) ? s.stage : 'unrecognized',
@@ -42,7 +40,6 @@ export function summarizeStatus(status) {
     sharing: ['withdrawn', 'accepted', 'declined'].includes(sharing) ? sharing : null,
     x_disabled: Array.isArray(s.services_off) ? s.services_off.includes('x') : null,
     x_provider_state: serviceStates.has(x.state) ? x.state : 'unrecognized',
-    purchased_balance_usd: amount,
   };
 }
 

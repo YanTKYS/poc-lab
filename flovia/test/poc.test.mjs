@@ -30,9 +30,38 @@ test('remaining free allowance and paid balance never enable a search', async ()
   assert.equal(r.search.quality, 'unverified');
   assert.deepEqual(client.calls, ['status', 'list', 'status']);
   assert.deepEqual(r.before, r.after);
-  assert.equal(r.before.purchased_balance_usd, 3.5);
+  assert.doesNotMatch(JSON.stringify(r), /purchased_balance/);
   assert.equal(r.calls.length, 3);
   assert.ok(r.calls.every((c) => Number.isFinite(c.elapsed_ms)));
+});
+
+for (const balance of ['$0.00', '$8734.562', 'EUR 8734.562', null, undefined]) {
+  test(`status summary omits purchase balances (${String(balance)})`, () => {
+    const summary = summarizeStatus({
+      ...ready(), purchased_balance_display: balance,
+      purchased_balance_usd: 8734.562,
+      purchased_balance: { amount: 8734.562, currency: 'USD' },
+    });
+    assert.doesNotMatch(JSON.stringify(summary), /purchased_balance|8734\.562/);
+  });
+}
+
+test('complete report excludes different balances from both status responses', async () => {
+  const client = fake();
+  let calls = 0;
+  client.status = async () => ({
+    ...ready(), purchased_balance_display: ++calls === 1 ? '$8734.562' : '$9621.438',
+  });
+  const report = await runPoc(client);
+  assert.equal(report.outcome, 'checked_search_skipped');
+  assert.equal(report.stop_reason, 'free_only_not_guaranteed');
+  assert.equal(report.search.executed, false);
+  assert.equal(calls, 2);
+  assert.ok(report.before);
+  assert.ok(report.after);
+  assert.doesNotMatch(JSON.stringify(report), /purchased_balance|8734\.562|9621\.438/);
+  assert.equal(report.before.five_hour.used_pct, 10);
+  assert.equal(report.after.week.used_pct, 20);
 });
 
 for (const [name, change, reason] of [
@@ -102,7 +131,7 @@ test('unknown errors and status fields do not echo raw server data', () => {
     services: { x: { state: poison } }, data_consent: { answer: poison },
   });
   assert.doesNotMatch(JSON.stringify(r), /SECRET|Authorization|Bearer|private/);
-  assert.equal(r.purchased_balance_usd, null);
+  assert.doesNotMatch(JSON.stringify(r), /purchased_balance/);
   assert.equal(safeError({ code: poison, message: poison }).code, 'unclassified_error');
 });
 
