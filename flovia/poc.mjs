@@ -24,6 +24,25 @@ export function safeError(error) {
   return { category, code, http_status: status, executed: ['yes', 'no', 'unknown'].includes(error?.executed) ? error.executed : 'unknown' };
 }
 
+function contractDiagnostics(status) {
+  const result = { contract_version_state: 'missing', observed_contract_version: null };
+  if (!Object.hasOwn(status, 'contract_version')) return result;
+  const version = status.contract_version;
+  if (version === null) return { ...result, contract_version_state: 'null' };
+  if (typeof version !== 'string') return { ...result, contract_version_state: 'invalid_type' };
+  // Local publication filter, not a declaration of the server's accepted syntax
+  // or compatibility. Require the entire string and a real calendar date.
+  const match = /^(20\d{2}-\d{2}-\d{2})\.([1-9]\d{0,5})$/u.exec(version);
+  const date = match && Date.parse(`${match[1]}T00:00:00.000Z`);
+  if (!match || match[0] !== version || !Number.isFinite(date) || new Date(date).toISOString().slice(0, 10) !== match[1]) {
+    return { ...result, contract_version_state: 'invalid_format' };
+  }
+  return {
+    contract_version_state: version === EXPECTED_CONTRACT_VERSION ? 'matches_sdk' : 'different_version',
+    observed_contract_version: version,
+  };
+}
+
 export function summarizeStatus(status) {
   const s = object(status);
   const consent = object(s.data_consent);
@@ -31,6 +50,7 @@ export function summarizeStatus(status) {
   const x = object(object(s.services).x);
   // Reports may be public. Purchase balances are not needed for the stop decision.
   return {
+    ...contractDiagnostics(s),
     contract_matches_sdk: s.contract_version === EXPECTED_CONTRACT_VERSION,
     stage: stages.has(s.stage) ? s.stage : 'unrecognized',
     five_hour: windowSummary(s.five_hour), week: windowSummary(s.week),

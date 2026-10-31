@@ -11,7 +11,7 @@ try {
     const client = new FloviaClient({
       apiKey: process.env.FLOVIA_KEY,
       retryRateLimited: false, timeoutMs: 30_000,
-      onContractMismatch: () => {}, // report only a boolean; do not echo server text
+      onContractMismatch: () => {}, // report only validated diagnostics; no raw SDK warning
     });
     report = await runPoc(client);
   }
