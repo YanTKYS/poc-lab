@@ -23,12 +23,12 @@ SDK の `StatusReply.contract_version` は文字列で、`EXPECTED_CONTRACT_VERS
 
 リポジトリの Actions Secret `FLOVIA_API_KEY` を使う。下記の実測では状態応答を取得できた。開発環境から Secret 一覧を読む権限はなく、値・一覧を取得する必要はない。値をチャット、コード、コマンド引数、ログに貼らない。
 
-1. `Flovia manual PoC` は PR #5 のマージで既定ブランチに登録済み。現在は下記の契約不一致を調査中のため再実行していない。現行仕様との整合が確認できた場合に限り、GitHub Actions の **Run workflow** から状態・一覧確認を **手動1回だけ**実行する。実行のために PR を自動マージしない。
+1. `Flovia manual PoC` は PR #5 のマージで既定ブランチに登録済み。契約診断を含む PR #6 のマージ後は、まず下記の「statusだけの契約診断」を **手動1回だけ**実行できる。整合性の確認はこの診断の結果を得てから行う。既存ワークフローの **Run workflow** による状態・一覧確認は、診断結果を照合した後に別途判断する。実行のために PR を自動マージしない。
 2. ジョブの `Read status without performing a data lookup` ステップだけに `FLOVIA_KEY: ${{ secrets.FLOVIA_API_KEY }}` を注入する。インストール・テストには渡さない。
 3. `flovia-poc-<run_id>-<attempt>` アーティファクト内の `report.json` を確認する。保存期間は7日。成果物は公開リポジトリの閲覧者にも読まれ得るものとして扱い、アカウントIDや任意文字列を保存しない。
 4. `error` は異常終了、`stopped` は利用条件の確認段階で停止、`checked_search_skipped` は状態確認・一覧確認済みで検索は未実行を意味する。成功終了を「検索成功」と解釈しない。エラー時も勝手に再実行せず、原因を確認する。
 
-実行可能な接続がある場合のローカル手順:
+契約診断後に整合性を確認したうえで行う、既存の状態・一覧確認のローカル手順:
 
 ```sh
 cd flovia
@@ -39,6 +39,33 @@ npm run check
 ```
 
 SDK のキーファイルへの自動フォールバックは使わない。`FLOVIA_KEY` がなければネットワーク呼出し前に停止する。結果は Git 無視対象の `flovia/results/report.json` に書く。起動時に Secret を表示するコマンド、シェルのトレース、SDK の生レスポンス出力を使わない。
+
+## statusだけの契約診断（PR #6 マージ後）
+
+公式の [接続確認](https://docs.flovia.dev/connect/check/) によれば `flovia_status` はデータソースへの照会を伴わない。この診断に限り、SDK／サーバーの整合性が未確認でも手動1回の実行を許容する。`FLOVIA_KEY` が安全に注入された環境で、依存関係をインストール済みの `flovia/` を作業ディレクトリとして以下を実行する。キーをチャット・コマンド引数に貼らない。
+
+既存の `npm run check`／手動ワークフローは、契約が一致して利用条件を満たすと `tools/list` と後続のstatusを呼ぶため、このstatusのみの診断とは区別する。以下のコマンドは契約が一致しても一覧取得へ進まない。
+
+```sh
+node --input-type=module <<'JS'
+import { FloviaClient } from '@flovialabs/sdk';
+import { safeError, summarizeStatus } from './poc.mjs';
+try {
+  const key = process.env.FLOVIA_KEY;
+  if (!key?.trim()) throw { code: 'missing_key', executed: 'no' };
+  const client = new FloviaClient({
+    apiKey: key, retryRateLimited: false, timeoutMs: 30_000,
+    onContractMismatch: () => {},
+  });
+  console.log(JSON.stringify(summarizeStatus(await client.status()), null, 2));
+} catch (error) {
+  console.error(JSON.stringify(safeError(error)));
+  process.exitCode = 1;
+}
+JS
+```
+
+出力は既存の公開用フィルターを通した契約診断・状態項目だけで、キー・生レスポンス・購入残高を含めない。使用率は出力されるので公開範囲に留意する。不一致・欠落・不正値ならその場で停止し、`tools/list`・X検索・再送は行わない。検証済みの契約番号または診断分類を記録し、公式仕様とSDK期待契約を照合する。一致した場合も、この診断コマンドはstatusだけで終了する。結果をもとに次の状態・ツール一覧確認を別途判断し、番号を無条件で書き換えない。
 
 ## 記録する項目と停止条件
 
@@ -92,7 +119,7 @@ SDK のキーファイルへの自動フォールバックは使わない。`FLO
 
 ## 次の判断
 
-まず契約診断を含む別PRをレビューする。必要な診断実行の進め方を決め、サーバー実契約・公式仕様・SDKとの整合を確認するまでは状態・ツール一覧確認を再実行しない。整合が確認できた場合に限り手動1回の確認に進み、勝手な再送はしない。無料限定を保証する正式な仕組みがない場合、この条件ではX検索PoCの採否は **保留** とする。`ai-watch` / `news-watch` にはまだ採用しない。
+まず契約診断を含む PR #6 をレビューする。マージ後に上記のstatusだけの診断を手動1回実行し、不一致なら一覧取得・検索をせず停止する。その記録をもとにサーバー実契約・公式仕様・SDKを照合し、整合性を確認してから状態・ツール一覧確認の次段階を別途判断する。勝手な再送はしない。実データ検索は契約の一致だけでは解禁せず、無料限定を保証する正式な仕組みが確認できるまでは禁止を維持する。この条件ではX検索PoCの採否は **保留** とし、`ai-watch` / `news-watch` にはまだ採用しない。
 
 保証できる正式仕様が確認された場合に限り、別の変更でライブスキーマ／カタログの引数を確認し、保存済み operation ID を使った直近7日・日本語の生成AI関連公開投稿の最小1ページ検索を1回実装・実行する。必要なID・日時・返却URLだけを許可リストで抽出し、投稿本文・ユーザー情報を保存しない。今の版に検索を有効化するスイッチはない。
 
