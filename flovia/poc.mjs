@@ -76,10 +76,10 @@ function stopReason(s) {
 
 // Only read-only status/catalog operations. SDK 0.1.15 documents paid fallback and
 // no server-enforced free-only request option. Therefore this version never searches.
-export async function runPoc(client, { now = () => new Date(), clock = () => performance.now() } = {}) {
+export async function runPoc(client, { now = () => new Date(), clock = () => performance.now(), statusOnly = false } = {}) {
   const report = {
     format_version: 1, started_at: now().toISOString(), sdk_version: '0.1.15',
-    expected_contract: EXPECTED_CONTRACT_VERSION,
+    expected_contract: EXPECTED_CONTRACT_VERSION, mode: statusOnly ? 'status-only' : 'check',
     outcome: 'stopped', stop_reason: null, phase: 'status_before',
     before: null, after: null, x_offered: null,
     search: { executed: false, count: null, posts: [], quality: 'unverified', reason: 'not_reached' },
@@ -96,6 +96,10 @@ export async function runPoc(client, { now = () => new Date(), clock = () => per
     report.before = summarizeStatus(before);
     report.stop_reason = stopReason(report.before);
     if (report.stop_reason) return report;
+    if (statusOnly) {
+      report.outcome = 'checked_status_only';
+      return report;
+    }
     report.phase = 'tools_list';
     const tools = await call('tools/list', () => client.listTools());
     report.x_offered = Array.isArray(tools) && tools.some((t) => t?.name === 'flovia_x');
@@ -113,8 +117,12 @@ export async function runPoc(client, { now = () => new Date(), clock = () => per
     report.stop_reason = 'request_failed';
     report.error = safeError(error);
   } finally {
-    report.search.reason = report.stop_reason ?? 'not_reached';
+    report.search.reason = report.stop_reason ?? (statusOnly ? 'status_only' : 'not_reached');
     report.finished_at = now().toISOString();
   }
   return report;
+}
+
+export async function runStatusOnly(client, options = {}) {
+  return runPoc(client, { ...options, statusOnly: true });
 }

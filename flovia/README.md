@@ -23,49 +23,28 @@ SDK の `StatusReply.contract_version` は文字列で、`EXPECTED_CONTRACT_VERS
 
 リポジトリの Actions Secret `FLOVIA_API_KEY` を使う。下記の実測では状態応答を取得できた。開発環境から Secret 一覧を読む権限はなく、値・一覧を取得する必要はない。値をチャット、コード、コマンド引数、ログに貼らない。
 
-1. `Flovia manual PoC` は PR #5 のマージで既定ブランチに登録済み。契約診断を含む PR #6 のマージ後は、まず下記の「statusだけの契約診断」を **手動1回だけ**実行できる。整合性の確認はこの診断の結果を得てから行う。既存ワークフローの **Run workflow** による状態・一覧確認は、診断結果を照合した後に別途判断する。実行のために PR を自動マージしない。
-2. ジョブの `Read status without performing a data lookup` ステップだけに `FLOVIA_KEY: ${{ secrets.FLOVIA_API_KEY }}` を注入する。インストール・テストには渡さない。
+1. PR #6 マージ後、GitHub Actions の **Flovia manual PoC → Run workflow** を開き、対象ブランチを `main`、`mode` を初期値の **status-only** にして **手動1回だけ**実行する。登録済みの Actions Secret を使うので、ローカルPCへのAPIキー再設定は不要。実行のために PR を自動マージしない。
+2. ジョブの `Read the selected status mode without a data lookup` ステップだけに `FLOVIA_KEY: ${{ secrets.FLOVIA_API_KEY }}` を注入する。インストール・テストには渡さない。`status-only` は専用の `status-only.mjs` を呼び、`flovia_status` だけを最大1回実行する。
 3. `flovia-poc-<run_id>-<attempt>` アーティファクト内の `report.json` を確認する。保存期間は7日。成果物は公開リポジトリの閲覧者にも読まれ得るものとして扱い、アカウントIDや任意文字列を保存しない。
-4. `error` は異常終了、`stopped` は利用条件の確認段階で停止、`checked_search_skipped` は状態確認・一覧確認済みで検索は未実行を意味する。成功終了を「検索成功」と解釈しない。エラー時も勝手に再実行せず、原因を確認する。
+4. `checked_status_only` は状態確認だけで終了、`stopped` は契約不一致等で停止、`error` は異常終了を意味する。`mode=status-only` では契約が一致しても一覧取得せず、`after=null`・`x_offered=null` のままである。将来の `mode=check` に限り、契約一致と利用条件の確認後に一覧取得へ進み、`checked_search_skipped` なら状態・一覧確認済みで検索は未実行。成功終了を「検索成功」と解釈しない。エラー時も勝手に再実行せず、原因を確認する。
 
-契約診断後に整合性を確認したうえで行う、既存の状態・一覧確認のローカル手順:
+ローカル開発ではキーなしでオフラインテストだけを行える:
 
 ```sh
 cd flovia
 npm ci --ignore-scripts --no-audit --no-fund
 npm test                          # 全件モック、Floviaへ通信しない
-# FLOVIA_KEY が安全に注入されている場合だけ:
-npm run check
 ```
 
-SDK のキーファイルへの自動フォールバックは使わない。`FLOVIA_KEY` がなければネットワーク呼出し前に停止する。結果は Git 無視対象の `flovia/results/report.json` に書く。起動時に Secret を表示するコマンド、シェルのトレース、SDK の生レスポンス出力を使わない。
+SDK のキーファイルへの自動フォールバックは使わない。実行ステップで `FLOVIA_KEY` が得られなければネットワーク呼出し前に停止する。両モードとも、共通のキー処理・エラーフィルター・ファイル保存処理を使い、`flovia/results/report.json` に0600で書いてから同じパスをアーティファクトへ保存する。起動時に Secret を表示するコマンド、シェルのトレース、SDK の生レスポンス出力を使わない。
 
 ## statusだけの契約診断（PR #6 マージ後）
 
-公式の [接続確認](https://docs.flovia.dev/connect/check/) によれば `flovia_status` はデータソースへの照会を伴わない。この診断に限り、SDK／サーバーの整合性が未確認でも手動1回の実行を許容する。`FLOVIA_KEY` が安全に注入された環境で、依存関係をインストール済みの `flovia/` を作業ディレクトリとして以下を実行する。キーをチャット・コマンド引数に貼らない。
+公式の [接続確認](https://docs.flovia.dev/connect/check/) によれば `flovia_status` はデータソースへの照会を伴わない。この診断に限り、SDK／サーバーの整合性が未確認でも上記の Actions から手動1回の実行を許容する。`mode=status-only`（初期値）では `npm run status-only` が専用スクリプトを起動し、サニタイズ済みの診断結果をアーティファクトに残す。既存の Actions Secret を再利用し、利用者にキーの取得・ローカルへのコピーを求めない。
 
-既存の `npm run check`／手動ワークフローは、契約が一致して利用条件を満たすと `tools/list` と後続のstatusを呼ぶため、このstatusのみの診断とは区別する。以下のコマンドは契約が一致しても一覧取得へ進まない。
+不一致・欠落・不正値なら `contract_mismatch` で停止し、`tools/list`・X検索・再送は行わない。一致してもこのモードはstatusだけで終了する。公開用フィルターを通した契約番号または診断分類を記録し、公式仕様とSDK期待契約を照合する。キー・生レスポンス・購入残高は出さない。使用率は出力されるので公開範囲に留意する。
 
-```sh
-node --input-type=module <<'JS'
-import { FloviaClient } from '@flovialabs/sdk';
-import { safeError, summarizeStatus } from './poc.mjs';
-try {
-  const key = process.env.FLOVIA_KEY;
-  if (!key?.trim()) throw { code: 'missing_key', executed: 'no' };
-  const client = new FloviaClient({
-    apiKey: key, retryRateLimited: false, timeoutMs: 30_000,
-    onContractMismatch: () => {},
-  });
-  console.log(JSON.stringify(summarizeStatus(await client.status()), null, 2));
-} catch (error) {
-  console.error(JSON.stringify(safeError(error)));
-  process.exitCode = 1;
-}
-JS
-```
-
-出力は既存の公開用フィルターを通した契約診断・状態項目だけで、キー・生レスポンス・購入残高を含めない。使用率は出力されるので公開範囲に留意する。不一致・欠落・不正値ならその場で停止し、`tools/list`・X検索・再送は行わない。検証済みの契約番号または診断分類を記録し、公式仕様とSDK期待契約を照合する。一致した場合も、この診断コマンドはstatusだけで終了する。結果をもとに次の状態・ツール一覧確認を別途判断し、番号を無条件で書き換えない。
+`mode=check` は将来の状態・ツール一覧確認用に残す。診断結果を照合した後に別途判断して明示的に選択する。このモードでも従来の契約一致・利用条件の検査と安全停止を維持し、実データ検索はしない。キー未設定時は両モードとも通信前に停止し、401/403・429・タイムアウト等を自動リトライしない。初期値へフォールバックするのはモード未指定時だけで、未知のモード指定は処理を開始せず失敗させる。
 
 ## 記録する項目と停止条件
 
@@ -113,6 +92,7 @@ JS
 | 手動ワークフローの起動 | PR #5 マージ前は404。マージ後の run #41191707740 は成功 |
 | GitHub Actions上の状態応答 | 上記実測で応答あり。契約不一致で安全停止。Xツール一覧は未確認 |
 | 契約診断と停止 | 欠落・null・型不正・不正形式・異なる版で一覧取得に進まないモックテスト成功。新診断による実測は未実行 |
+| Actions用 status-only CLI | 一致・不一致・不正値でもstatusだけ最大1回。キー未設定では0回、401/429で再送なし、サニタイズ済みファイル保存を実SDKモックで確認 |
 | X投稿取得、ID、公開日時、URL、日本語検索、レスポンス構造・品質 | 未検証（無料限定を保証できず検索機能を停止） |
 
 ネットワーク不要のテストだけを `Flovia offline tests` で PR／main push 時に実行する。このワークフローには Secret 注入も実行用スクリプト呼出しもない。既存 Pages ワークフローとルートの依存関係・ビルド対象は変更しない。
