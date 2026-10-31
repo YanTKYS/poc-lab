@@ -7,6 +7,7 @@
 | PoC | フォルダ | 概要 | 検証状況 |
 | --- | --- | --- | --- |
 | Pele と Mermaid.js の比較 | [`pele/`](pele/README.md) | 同じ Mermaid 記法を Pele と Mermaid.js で描画し、見た目・描画時間・互換性を比較する | 検証終了・採用保留 |
+| Flovia X検索接続 | [`flovia/`](flovia/README.md) | 手動Actionsで状態・無料枠を確認。無料限定を保証できないため検索は停止 | 保留・実通信未検証 |
 
 ## 方針
 
