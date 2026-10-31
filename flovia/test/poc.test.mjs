@@ -177,3 +177,72 @@ test('actual SDK does not retry 429 refusal', async () => {
   assert.equal(r.error.category, 'rate_limit');
   assert.equal(r.error.executed, 'no');
 });
+
+// Versions other than EXPECTED_CONTRACT_VERSION below are synthetic fixtures,
+// never claims about an observed server contract.
+for (const [name, fields, state, observed] of [
+  ['expected', { contract_version: EXPECTED_CONTRACT_VERSION }, 'matches_sdk', EXPECTED_CONTRACT_VERSION],
+  ['different date-version', { contract_version: '2026-10-31.152' }, 'different_version', '2026-10-31.152'],
+  ['missing', {}, 'missing', null],
+  ['null', { contract_version: null }, 'null', null],
+  ['undefined', { contract_version: undefined }, 'invalid_type', null],
+  ['number', { contract_version: 151 }, 'invalid_type', null],
+  ['object', { contract_version: { secret: 'flv_PRIVATE' } }, 'invalid_type', null],
+  ['array', { contract_version: [EXPECTED_CONTRACT_VERSION] }, 'invalid_type', null],
+  ['empty', { contract_version: '' }, 'invalid_format', null],
+  ['secret', { contract_version: 'flv_PRIVATE Authorization Bearer KEY' }, 'invalid_format', null],
+  ['suffix', { contract_version: EXPECTED_CONTRACT_VERSION + ' flv_PRIVATE' }, 'invalid_format', null],
+  ['prefix', { contract_version: 'flv_PRIVATE ' + EXPECTED_CONTRACT_VERSION }, 'invalid_format', null],
+  ['trailing newline', { contract_version: EXPECTED_CONTRACT_VERSION + '\n' }, 'invalid_format', null],
+  ['leading space', { contract_version: ' ' + EXPECTED_CONTRACT_VERSION }, 'invalid_format', null],
+  ['invalid day', { contract_version: '2026-02-29.151' }, 'invalid_format', null],
+  ['invalid month', { contract_version: '2026-13-01.151' }, 'invalid_format', null],
+  ['leading zero revision', { contract_version: '2026-10-31.0151' }, 'invalid_format', null],
+  ['oversized revision', { contract_version: '2026-10-31.1234567' }, 'invalid_format', null],
+  ['oversized string', { contract_version: 'flv_PRIVATE'.repeat(1000) }, 'invalid_format', null],
+]) {
+  test(`contract diagnostics: ${name}; mismatch remains a hard stop`, async () => {
+    const status = ready();
+    delete status.contract_version;
+    Object.assign(status, fields);
+    const c = fake(status);
+    const r = await runPoc(c);
+    assert.equal(r.before.contract_version_state, state);
+    assert.equal(r.before.observed_contract_version, observed);
+    assert.equal(r.before.contract_matches_sdk, state === 'matches_sdk');
+    assert.equal(r.search.executed, false);
+    assert.doesNotMatch(JSON.stringify(r), /flv_PRIVATE|Authorization|Bearer|KEY/);
+    if (state === 'matches_sdk') {
+      assert.deepEqual(c.calls, ['status', 'list', 'status']);
+      assert.equal(r.after.contract_version_state, state);
+    } else {
+      assert.equal(r.stop_reason, 'contract_mismatch');
+      assert.deepEqual(c.calls, ['status']);
+      assert.equal(r.after, null);
+      assert.equal(r.x_offered, null);
+    }
+  });
+}
+
+test('actual SDK exposes only filtered mismatch diagnostics and sends no list request', async () => {
+  const requests = [];
+  const c = new FloviaClient({
+    apiKey: 'flv_MOCK_SECRET', retryRateLimited: false, onContractMismatch: () => {},
+    fetch: async (request) => {
+      const body = await request.json();
+      requests.push(body);
+      assert.equal(body.params?.name, 'flovia_status');
+      return Response.json({ jsonrpc: '2.0', id: body.id, result: {
+        content: [{ type: 'text', text: JSON.stringify({ ...ready(), contract_version: '2026-10-31.152' }) }],
+      } });
+    },
+  });
+  const r = await runPoc(c);
+  assert.equal(r.before.contract_version_state, 'different_version');
+  assert.equal(r.before.observed_contract_version, '2026-10-31.152');
+  assert.equal(r.stop_reason, 'contract_mismatch');
+  assert.equal(requests.length, 1);
+  assert.equal(r.search.executed, false);
+  assert.equal(r.x_offered, null);
+  assert.doesNotMatch(JSON.stringify(r), /flv_MOCK_SECRET|Authorization/);
+});

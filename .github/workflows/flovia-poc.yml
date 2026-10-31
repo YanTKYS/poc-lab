@@ -2,6 +2,15 @@ name: Flovia manual PoC
 
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Status-only diagnosis, or later status and tool-list check
+        type: choice
+        required: true
+        default: status-only
+        options:
+          - status-only
+          - check
 
 permissions:
   contents: read
@@ -26,11 +35,17 @@ jobs:
       - run: npm test
         working-directory: flovia
       # Only this step receives the key. Never use shell tracing or print env.
-      - name: Read status without performing a data lookup
-        run: npm run check
+      - name: Read the selected status mode without a data lookup
+        run: |
+          case "$FLOVIA_MODE" in
+            status-only) npm run status-only ;;
+            check) npm run check ;;
+            *) echo "Unsupported Flovia mode" >&2; exit 1 ;;
+          esac
         working-directory: flovia
         env:
           FLOVIA_KEY: ${{ secrets.FLOVIA_API_KEY }}
+          FLOVIA_MODE: ${{ inputs.mode || 'status-only' }}
       - name: Save sanitized evidence only
         if: always()
         uses: actions/upload-artifact@v6
