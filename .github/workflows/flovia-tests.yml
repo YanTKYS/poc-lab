@@ -1,0 +1,25 @@
+name: Flovia offline tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: flovia/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: flovia
+      - run: npm test
+        working-directory: flovia

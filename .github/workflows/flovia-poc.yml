@@ -1,0 +1,41 @@
+name: Flovia manual PoC
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flovia-manual-poc
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: flovia/package-lock.json
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+        working-directory: flovia
+      - run: npm test
+        working-directory: flovia
+      # Only this step receives the key. Never use shell tracing or print env.
+      - name: Read status without performing a data lookup
+        run: npm run check
+        working-directory: flovia
+        env:
+          FLOVIA_KEY: ${{ secrets.FLOVIA_API_KEY }}
+      - name: Save sanitized evidence only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: flovia-poc-${{ github.run_id }}-${{ github.run_attempt }}
+          path: flovia/results/report.json
+          if-no-files-found: warn
+          retention-days: 7
