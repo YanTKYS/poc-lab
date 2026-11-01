@@ -50,8 +50,8 @@ test('トップページからPele比較ページへ遷移できる（サブパ�
   await expect(page).toHaveURL(`${BASE}pele/`);
   await expect(page.locator('body')).toHaveAttribute('data-ready', 'true', { timeout: 30_000 });
   await waitIdle(page);
-  await expect(page.locator('#versions')).toContainText('pele 1.8.0 / mermaid 12.1.0');
-  await expect(pane(page, 'pele').locator('[data-field="version"]')).toHaveText('v1.8.0');
+  await expect(page.locator('#versions')).toContainText('pele 1.13.0 / mermaid 12.1.0');
+  await expect(pane(page, 'pele').locator('[data-field="version"]')).toHaveText('v1.13.0');
   await expect(pane(page, 'mermaid').locator('[data-field="version"]')).toHaveText('v12.1.0');
   await page.getByRole('link', { name: 'PoC一覧' }).click();
   await expect(page).toHaveURL(BASE);
@@ -193,7 +193,8 @@ test('表示幅を狭めると両エンジンがその幅に収めて描画す�
   for (const engine of ENGINES) {
     const frame = pane(page, engine).locator('[data-field="frame"]');
     await expect.poll(async () => (await frame.boundingBox()).width).toBe(360);
-    await expect.poll(async () => (await diagram(page, engine).boundingBox()).width).toBeLessThanOrEqual(360);
+    // ResizeObserver による再描画中は一時的に SVG がなくなるため、幅の検証をリトライする。
+    await expect.poll(async () => (await diagram(page, engine).boundingBox())?.width ?? Infinity).toBeLessThanOrEqual(360);
   }
   await page.locator('.compare').screenshot({ path: test.info().outputPath('frame-360.png') });
 });
