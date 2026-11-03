@@ -2,7 +2,7 @@
 
 `news-watch` / `ai-watch` の要約・分類候補を評価する独立した PoC です。両リポジトリへの導入は行いません。Node.js 22 以上の標準 `fetch` と `node:test` だけを使い、外部依存・インストール処理はありません。既存のビルド、Pages、他の PoC は変更しません。
 
-**ライブ通信は未実施です。無料で成功したという実測結果はまだありません。** レビュー・マージ後に、利用者が GitHub Actions を手動起動して 1 モデルずつ確認します。本 PR では Secret の取得・一覧照会・疎通確認を行いません。
+**2026-11-03 に無料専用モデル 3 種を各 1 回ライブ検証し、全モデルで HTTP 200 と応答モデル ID の一致を確認しました。固定タスクの簡易判定に合格したのは DeepSeek のみです。** 詳細は下記の初回実測結果に記載しています。実請求額・残高変化は未確認で、採用は引き続き保留です。
 
 ## 対象と公式仕様
 
@@ -12,7 +12,7 @@
 - `glm-5.3-flash-free`
 - `minimax-m3.1-flash-free`
 
-公式資料確認日: **2026-11-03**。以下は資料の記載であり、このキーでの実測ではありません。
+公式資料確認日: **2026-11-03**。この節は公式資料の要約です。下記の実測結果とは区別して扱います。
 
 - [`Free models`](https://docs.beatapi.io/free-models): `-free` はトークン単価のない別 ID。有料版の ID は別の課金対象で、大文字小文字も区別されます。
 - 初回チャージ前は **アカウント全体で成功 1 回/分**、チャージ後は最大 10 回/分。無料モデルは制限・提供終了の可能性があり、速度・継続提供・本番可用性は保証されません。**この PoC のためにチャージする必要はありません。**
@@ -51,7 +51,7 @@ node --test beatapi/test/*.test.mjs
 
 通常の PR / main への push では [`beatapi-tests.yml`](../.github/workflows/beatapi-tests.yml) がモックテストだけを実行します。許可 3 モデル、未知・有料・別無料 ID の拒否、キーなし、401/403/429、リダイレクト禁止、通信エラー、ヘッダー取得後も含むタイムアウト、モデル不一致、JSON 不正・空回答、品質判定、秘密情報除外、無再送、CLI の終了コード・保存処理を確認します。テストは実 `fetch` を禁止し、インメモリの応答を注入します。
 
-## 手動 Actions の使い方（マージ後）
+## 手動 Actions の使い方
 
 1. `poc-lab` の Actions → **BeatAPI manual PoC** → Run workflow を開きます。
 2. ブランチは `main`、`model` は上記 3 ID のうち **1 つ**を指定します。`main` 以外はジョブをスキップします。
@@ -61,7 +61,7 @@ node --test beatapi/test/*.test.mjs
 
 429 ではその場で停止し、自動再送しません。再確認は十分に待ってから利用者が新たに手動で実行します。401/403 は権限・設定を確認し、モデル不一致は原因を確認するまで以降の実行を停止してください。タイムアウトでサーバー側の生成が取り消されたと断定できないため、直後の再実行も避けます。
 
-[`beatapi-poc.yml`](../.github/workflows/beatapi-poc.yml) は `workflow_dispatch` 専用で、PR / push / schedule によるライブ起動はありません。CLI は `node beatapi/run.mjs --model <許可ID>` の形式ですが、**本 PR 内でキーを設定して実行しないでください**。本 PoC のライブ検証経路は、レビュー・マージ後の手動 Actions です。
+[`beatapi-poc.yml`](../.github/workflows/beatapi-poc.yml) は `workflow_dispatch` 専用で、PR / push / schedule によるライブ起動はありません。CLI の形式は `node beatapi/run.mjs --model <許可ID>` です。本 PoC のライブ検証には、レビュー済みの `main` 上の手動 Actions を利用します。キーの取得・一覧照会や、ローカルへの貼り付けは不要です。
 
 ## 安全策とレポートの扱い
 
@@ -84,14 +84,35 @@ node --test beatapi/test/*.test.mjs
 | `output` | JSON パース可否、スキーマ判定、許可カテゴリ、要約文字数、簡易品質チェック。回答なし・不一致等は `null` |
 | `usage` | `prompt_tokens`, `completion_tokens`, `total_tokens` のうち非負の安全な整数だけ。欠落値や数値文字列は補完しない |
 
-## 比較記録（未実測）
+## 初回実測結果（2026-11-03）
 
-本 PR で完了するのはオフライン実装・テストです。Secret の有効性、無料での成功、返答・JSON 対応、モデル別遅延・安定性・出力上限はライブ未検証です。`max_tokens` による打ち切りも実測していません。
+記録元: [Issue #10 の 3 モデル初回比較](https://github.com/YanTKYS/poc-lab/issues/10#issuecomment-6595305123)、[DeepSeek 個別結果](https://github.com/YanTKYS/poc-lab/issues/10#issuecomment-6595199400)。既存の Actions ログとサニタイズ済み `report.json` を照合した記録を反映しています。
 
-| モデル | 実測日・Actions run | JSON / 分類 / 日本語簡易判定 | 遅延 ms | 成功数 / 試行数 | 採否 |
-| --- | --- | --- | --- | --- | --- |
-| `deepseek-v4.1-flash-free` | 未実測 | 未検証 | — | — | 保留 |
-| `glm-5.3-flash-free` | 未実測 | 未検証 | — | — | 保留 |
-| `minimax-m3.1-flash-free` | 未実測 | 未検証 | — | — | 保留 |
+`main` の **BeatAPI manual PoC** で、登録済み Secret を使って許可済みの `-free` モデルへ各 1 回リクエストしました。事前モックテストは全実行で **80/80 成功**。自動再試行・有料モデルへのフォールバックは行っていません。**全モデルで API 通信は成功しましたが、要約・分類タスクの成功は DeepSeek の 1 回だけです。**
 
-実測後は短期 artifact が失効する前に、必要な集計値と Actions run URL を表へ追記してください。日本語は上記の簡易判定に限定し、流暢さは未評価として区別します。少数回の成功率・遅延はその時点の観察であり、安定性や無料提供の継続を保証しません。採否や本番導入は別途判断します。
+| 指標 | DeepSeek V4.1 Flash Free | GLM 5.3 Flash Free | MiniMax M3.1 Flash Free |
+| --- | --- | --- | --- |
+| Actions run | [41575857373](https://github.com/YanTKYS/poc-lab/actions/runs/41575857373) | [41576371259](https://github.com/YanTKYS/poc-lab/actions/runs/41576371259) | [41576869582](https://github.com/YanTKYS/poc-lab/actions/runs/41576869582) |
+| `selected_model` | `deepseek-v4.1-flash-free` | `glm-5.3-flash-free` | `minimax-m3.1-flash-free` |
+| HTTP / 応答モデル ID | 200 / 指定と一致 | 200 / 指定と一致 | 200 / 指定と一致 |
+| `requests_sent` | 1 | 1 | 1 |
+| `elapsed_ms` | **13,803** | **39,256** | **3,115** |
+| usage: prompt / completion / total | 182 / 417 / 599 | 175 / 512 / 687 | 329 / 26 / 355 |
+| `finish_reason` | `stop` | `length` | `stop` |
+| JSON パース | true | false | false |
+| `outcome` / `reason` | `passed` / `null` | `stopped` / `incomplete_answer` | `stopped` / `invalid_output_json` |
+| 簡易判定 | 合格（`heuristic_pass`） | 不合格 | 不合格 |
+
+- **DeepSeek:** JSON 構造、カテゴリ `防災`、日付・場所・防災訓練の指定語、80 文字以内などの簡易基準に合格しました。生成要約は **48 文字**です。回答全文を保存していないため、人手による言語品質評価ではありません。
+- **GLM:** `max_tokens: 512` と同数の completion tokens、`finish_reason: length` で出力打ち切りと JSON 不成立を確認しました。内部推論がトークン枠を消費した可能性はありますが、出力本文・推論内訳を記録していないため断定できません。
+- **MiniMax:** `finish_reason: stop`、26 completion tokens でしたが、JSON パースに失敗しました。回答全文を保存しておらず、実際の返答形式と失敗原因は不明です。この結果からモデル全般の能力不足とは判断しません。
+
+確認できたのは、登録済み Secret を用いた 3 つの無料専用 ID への正常な API 応答、各 1 回の所要時間・usage、固定タスクでの上記判定です。無料専用 ID への疎通確認と、実際の請求額の確認は区別します。
+
+引き続き未確認の事項:
+
+- **実請求額・残高変化**。残高や課金情報は取得・記録していません。
+- **日本語の自然さ・事実整合性の人手評価**。回答全文を保持せず、`heuristic_pass` は文字数・指定語・カテゴリ・構造の簡易検査に限ります。
+- **安定性・継続提供・本番可用性**。各モデル 1 回のみの観察で、速度や品質の一般的な優劣を決めるものではありません。無料版のコンテキスト長・出力上限も検証していません。
+
+既存の `news-watch` / `ai-watch` には未導入で、3 モデルとも採用は保留です。追加検証や採用判断は別途扱います。今回の README 更新では API の再実行、Secret 参照、PoC ロジック・Actions の変更は行っていません。今後の実測記録も、短期 artifact が失効する前に必要な集計値と Actions run URL を残してください。

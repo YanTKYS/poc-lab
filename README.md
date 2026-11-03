@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | Pele と Mermaid.js の比較 | [`pele/`](pele/README.md) | 同じ Mermaid 記法を Pele と Mermaid.js で描画し、見た目・描画時間・互換性を比較する | 1.13.0再検証・再評価候補 |
 | Flovia X検索接続 | [`flovia/`](flovia/README.md) | 状態応答・契約不一致の安全停止を記録。X投稿検索は未実施 | 検証終了・X提供終了につき採用見送り |
-| BeatAPI 無料テキストモデル比較 | [`beatapi/`](beatapi/README.md) | 許可済みの無料 3 モデルを手動 Actions で 1 つずつ要約・分類評価 | オフライン検証のみ・ライブ未実測 |
+| BeatAPI 無料テキストモデル比較 | [`beatapi/`](beatapi/README.md) | 許可済みの無料 3 モデルを手動 Actions で 1 つずつ要約・分類評価 | 3モデル初回実測済み・DeepSeekのみ簡易判定合格 |
 
 ## 方針
 
