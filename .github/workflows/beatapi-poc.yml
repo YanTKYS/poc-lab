@@ -1,0 +1,52 @@
+name: BeatAPI manual PoC
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Select exactly one free model (one request, no retries)
+        type: choice
+        required: true
+        default: deepseek-v4.1-flash-free
+        options:
+          - deepseek-v4.1-flash-free
+          - glm-5.3-flash-free
+          - minimax-m3.1-flash-free
+
+permissions:
+  contents: read
+
+# Serializes this workflow, but does not enforce an account-wide minute limit.
+concurrency:
+  group: beatapi-manual-poc
+  cancel-in-progress: false
+
+jobs:
+  check:
+    # Live requests use reviewed code only after merge to the default branch.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+      - name: Offline tests (no secret, no dependencies to install)
+        run: node --test beatapi/test/*.test.mjs
+      # Only this step receives BEAT_API_KEY. Never print env or enable tracing.
+      - name: One request to the selected free model
+        run: node beatapi/run.mjs --model "$BEAT_MODEL"
+        env:
+          BEAT_MODEL: ${{ inputs.model }}
+          BEAT_API_KEY: ${{ secrets.BEAT_API_KEY }}
+      - name: Save sanitized report only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: beatapi-poc-${{ github.run_id }}-${{ github.run_attempt }}
+          path: beatapi/results/report.json
+          if-no-files-found: warn
+          retention-days: 3
