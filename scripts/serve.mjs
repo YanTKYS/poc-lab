@@ -16,6 +16,7 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.json': 'application/json; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 };
 
 createServer(async (req, res) => {

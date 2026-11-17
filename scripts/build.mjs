@@ -51,4 +51,24 @@ await writeFile(
   `window.VENDOR_VERSIONS = ${JSON.stringify(versions)};\n`,
 );
 
-console.log(`dist/ を出力しました (pele ${versions.pele}, mermaid ${versions.mermaid})`);
+// inquiry-workflow: 静的Webアプリ（app/）と、#14 で検証した Excel 入出力コード（src/）を配置する。
+// 検証用の道具・テスト・実測結果・node_modules は公開しない。
+const iw = path.join(root, 'inquiry-workflow');
+const iwDist = path.join(dist, 'inquiry-workflow');
+await mkdir(path.join(iwDist, 'lib'), { recursive: true });
+await mkdir(path.join(iwDist, 'vendor'), { recursive: true });
+await mkdir(path.join(iwDist, 'fixtures'), { recursive: true });
+for (const f of ['index.html', 'style.css']) await cp(path.join(iw, f), path.join(iwDist, f));
+await cp(path.join(iw, 'app'), path.join(iwDist, 'app'), { recursive: true });
+// src/*.mjs は Node のテストと共通のコード。拡張子だけ .js にそろえて配信する
+for (const f of ['ooxml', 'xlsx-layout', 'xlsx-patch', 'xlsx-verify']) {
+  const code = await readFile(path.join(iw, 'src', `${f}.mjs`), 'utf8');
+  await writeFile(path.join(iwDist, 'lib', `${f}.js`), code.replace(/from '\.\/([\w-]+)\.mjs'/g, "from './$1.js'"));
+}
+// 架空の原票と回答例（デモ用）だけを置く
+for (const f of ['genpyo.xlsx', 'answers.json']) await cp(path.join(iw, 'fixtures', f), path.join(iwDist, 'fixtures', f));
+versions.fflate = await installedVersion('fflate');
+await cp(path.join(modules, 'fflate/esm/browser.js'), path.join(iwDist, 'vendor', 'fflate.js'));
+await cp(path.join(modules, 'fflate/LICENSE'), path.join(iwDist, 'vendor', 'LICENSE-fflate.txt'));
+
+console.log(`dist/ を出力しました (pele ${versions.pele}, mermaid ${versions.mermaid}, fflate ${versions.fflate})`);
