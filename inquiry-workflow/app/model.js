@@ -255,7 +255,7 @@ export function setFinal(state, key, raw, by = 'manual', now = Date.now()) {
 export const clearFinal = (state, key) => delete state.finals[key];
 
 /**
- * 提出用Excelに何を書くかの計画。
+ * 確認用Excel（ドラフト）に何を書くかの計画。
  * - 書くのは、提出済みの課の回答と、とりまとめ部署が確定した複数課項目だけ
  * - 書かない項目は pending に理由を付けて返す（原票のセルはそのまま残る）
  * @returns {{writes:object[], rows:object[], pending:object[], cautions:object[], skippedOptional:number}}
@@ -312,19 +312,29 @@ export function outputPlan(state) {
   return plan;
 }
 
-// ---- 連絡文（ツールは送信しない。コピーして既存のメール等で送る） ---------
+// ---- 連絡文（ツールは送信しない。文面のコピーを試すためのデモ専用） ---------
+// このPoCは1台・同一ブラウザの localStorage だけで動く。別端末では回答内容を共有できないので、
+// コピーした文面は実際の依頼・催促・差戻しには使えない。冒頭にそれが読み取れる見出しを必ず付ける。
+export const DEMO_HEADING = '【デモ専用・実際の依頼として送付禁止】';
+export const DEMO_NOTICE = [
+  DEMO_HEADING,
+  'この文面は、PoC（試作）の画面で作った見本です。実際の依頼・催促・差戻しには使えません。',
+  'このPoCは1台の端末・同じブラウザの中だけで動き、別の端末でリンクを開いても回答内容は共有されません。',
+  '',
+];
 const fmtDate = (iso) => (iso ? iso.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, d) => `${y}年${+m}月${+d}日`) : '（未設定）');
 
 export function requestText(state, url) {
   const lines = DEPTS.filter((d) => d.id !== COORDINATOR && itemsOf(state, d.id).length).map((d) => `・${d.name}：${itemsOf(state, d.id).length}項目`);
   return [
+    ...DEMO_NOTICE,
     '関係各課 御中',
     '',
     `「${state.inquiry.title}」への回答をお願いします。`,
     `庁内締切：${fmtDate(state.inquiry.deadline)}`,
     '',
     '下のリンクを開き、所属課を選んで回答してください。',
-    'Excelファイルの配布・返信はありません。入力は自動で保存されます。',
+    'Excelファイルの配布・返信はありません。入力は、このブラウザの中に自動で保存されます。',
     url,
     '',
     '担当項目数',
@@ -340,6 +350,7 @@ export function reminderText(state, url) {
   return {
     depts: late,
     text: [
+      ...DEMO_NOTICE,
       `${late.map((d) => d.name).join('、')} 御中`,
       '',
       `「${state.inquiry.title}」の回答がまだ提出されていません。`,
@@ -357,6 +368,7 @@ export function reminderText(state, url) {
 export function returnText(state, dept, url) {
   const recs = openReturns(state, dept);
   return [
+    ...DEMO_NOTICE,
     `${deptName(dept)} 御中`,
     '',
     `「${state.inquiry.title}」の回答について、${recs.length}件の確認をお願いします。`,
