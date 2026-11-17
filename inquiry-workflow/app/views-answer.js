@@ -2,7 +2,7 @@
 import { colName } from '../lib/xlsx-layout.js';
 import * as M from './model.js';
 import { S } from './store.js';
-import { esc, fmtTime, fmtDeadline, statusBadge, answerText } from './ui.js';
+import { esc, fmtTime, fmtDeadline, statusBadge, answerText, savedText } from './ui.js';
 
 export function answerHtml() {
   const st = S.state;
@@ -156,7 +156,7 @@ function deptHtml(dept) {
     <div><h1>${esc(st.inquiry.title)}</h1>
       <p class="sub"><b>${esc(M.deptName(dept))}</b>　${statusBadge(status)}　庁内締切 ${esc(fmtDeadline(st.inquiry.deadline))}</p></div>
     <div class="ans-meter" aria-live="polite"><b id="done-count">${p.done}</b> / ${p.required}<span>入力済み（必須）</span>
-      <small id="saved-at">${S.ui.savedAt ? `自動保存済み ${fmtTime(S.ui.savedAt)}` : '入力は自動で保存されます'}</small></div>
+      <small id="saved-at" class="${S.ui.saveError ? 'err' : ''}">${esc(savedText())}</small></div>
   </div>
   <p class="hint">問合せ先：${esc(M.deptName(M.COORDINATOR))}（とりまとめ）　<button type="button" class="link" data-act="switch-dept">課を切り替える</button></p>
   ${locked ? `<div class="alert ok" role="status">提出済みです（${fmtTime(st.submitted[dept])}）。直したいときは、提出を取り消してから修正し、もう一度提出してください。

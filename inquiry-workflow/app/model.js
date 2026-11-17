@@ -219,8 +219,38 @@ export function mergeSuggestion(state, item) {
   if (item.type === 'text') return { by: 'concat', raw: parts.map((x) => `【${deptName(x.dept)}】${x.p.value}`).join('\n'), label: '各課の回答を連結' };
   return null;
 }
-export function setFinal(state, key, raw, by = 'manual') {
-  state.finals[key] = { raw: String(raw), na: false, by };
+// 複数課項目の確定値は、確定した時点の各課の回答と結び付けて記録する。
+// あとで回答が変わったり、提出が取り消されたり、差戻し中になったりしたら、確定値は使わない（再確認・再確定が必要）。
+const answerSig = (state, key, dept) => {
+  const a = answerOf(state, key, dept);
+  return a ? `${a.na ? 'na' : 'v'}:${a.raw}` : '';
+};
+/** 項目の担当課がすべて「提出済み」（差戻し中ではない）か。 */
+export const allOwnersSubmitted = (state, item) => ownersOf(item).every((d) => deptStatus(state, d) === 'submitted');
+
+/**
+ * 複数課項目の確定値の状態。
+ * none＝未設定／waiting＝未提出・差戻し中の課がある／stale＝確定後に回答が変わった／ok＝そのまま使える
+ */
+export function finalStatus(state, item) {
+  const f = state.finals[item.key];
+  if (!f) return 'none';
+  if (!allOwnersSubmitted(state, item)) return 'waiting';
+  return ownersOf(item).every((d) => f.basis?.[d] === answerSig(state, item.key, d)) ? 'ok' : 'stale';
+}
+export const FINAL_WHY = {
+  none: '複数課の回答をまとめた確定値が未設定',
+  waiting: '未提出または差戻し中の課があるため、確定値を使えません',
+  stale: '確定した後に回答が変わったため、再確認・再確定が必要',
+};
+
+/** 確定値を記録する。担当課がすべて提出済みのときだけ確定できる。 */
+export function setFinal(state, key, raw, by = 'manual', now = Date.now()) {
+  const item = state.items[key];
+  if (!allOwnersSubmitted(state, item)) return { ok: false, reason: 'すべての担当課が提出してから確定してください' };
+  const basis = Object.fromEntries(ownersOf(item).map((d) => [d, answerSig(state, key, d)]));
+  state.finals[key] = { raw: String(raw), na: false, by, at: now, basis };
+  return { ok: true };
 }
 export const clearFinal = (state, key) => delete state.finals[key];
 
@@ -236,9 +266,9 @@ export function outputPlan(state) {
     let p;
     let source;
     if (isMulti(it)) {
-      const f = state.finals[it.key];
-      if (!f) { plan.pending.push({ item: it, why: '複数課の回答をまとめた確定値が未設定' }); continue; }
-      p = parseAnswer(it, f);
+      const fs = finalStatus(state, it);
+      if (fs !== 'ok') { plan.pending.push({ item: it, why: FINAL_WHY[fs] }); continue; }
+      p = parseAnswer(it, state.finals[it.key]);
       source = `確定値（${it.depts.map(deptName).join('・')}）`;
     } else {
       const d = ownersOf(it)[0];

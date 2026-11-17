@@ -1,6 +1,7 @@
 // 画面の部品（HTML文字列を作る小さな関数）。
 import { colName, refOf } from '../lib/xlsx-layout.js';
 import * as M from './model.js';
+import { S } from './store.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pad = (n) => String(n).padStart(2, '0');
@@ -78,6 +79,12 @@ export const legendHtml = () => `<p class="legend">
 export const dialogHtml = (title, body, foot = '') => `<form method="dialog" class="dlg">
   <header><h2>${esc(title)}</h2><button type="button" class="link" data-act="close-dialog" aria-label="閉じる">閉じる ✕</button></header>
   <div class="dlg-body">${body}</div>${foot ? `<footer>${foot}</footer>` : ''}</form>`;
+
+/** 保存の状態を表す文（失敗しているときは、保存済みと見せない）。 */
+export function savedText() {
+  if (S.ui.saveError) return '保存できていません（再読み込みすると入力が失われます）';
+  return S.ui.savedAt ? `自動保存済み ${fmtTime(S.ui.savedAt)}` : '入力は自動で保存されます';
+}
 
 /** 回答1件を人が読める文字列にする。 */
 export function answerText(state, item, dept) {

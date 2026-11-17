@@ -165,3 +165,39 @@ test('候補外のセルも、見出しを付けて項目に追加できる。�
   M.addItem(state, { ...describeCell(layout, '取組状況', 'D5', (r) => !!state.items[M.keyOf(s.name, r)]), reasons: ['manual'] });
   assert.equal(state.items['取組状況!D5'].label, '問1 オンライン申請に対応している手続の数 ／ 補足・自由記述');
 });
+
+test('複数課項目の確定値は、確定後に回答が変わる・提出が取り消されると使わない（再確定が必要）', () => {
+  const { state } = fresh();
+  applySampleAssignment(state);
+  const key = '取組状況!C16';
+  const item = state.items[key];
+  // 未提出の課があるうちは確定できない
+  applySampleSubmissions(state, answers, ['shimin']);
+  assert.equal(M.setFinal(state, key, '5').ok, false);
+  applySampleSubmissions(state, answers, ['dx', 'zeimu', 'fukushi', 'kosodate', 'shisetsu']);
+  assert.equal(M.setFinal(state, key, '5', 'sum').ok, true);
+  assert.equal(M.finalStatus(state, item), 'ok');
+  assert.ok(M.outputPlan(state).writes.some((w) => w.cell === 'C16' && w.value === 5));
+
+  // 市民課が提出を取り消す → 未提出の課があるので書き出さない
+  M.withdraw(state, 'shimin');
+  assert.equal(M.finalStatus(state, item), 'waiting');
+  // 回答を 3→4 に直して再提出 → 確定値5は古いので書き出さない
+  M.setAnswer(state, key, 'shimin', '4');
+  assert.equal(M.submit(state, 'shimin').ok, true);
+  assert.equal(M.finalStatus(state, item), 'stale');
+  let plan = M.outputPlan(state);
+  assert.equal(plan.writes.some((w) => w.cell === 'C16'), false);
+  assert.match(plan.pending.find((p) => p.item.key === key).why, /再確認・再確定/);
+
+  // 差戻し中も同じ（確定値は使わない）
+  M.setFinal(state, key, '6');
+  assert.equal(M.finalStatus(state, item), 'ok');
+  M.returnItem(state, key, 'zeimu', '確認してください');
+  assert.equal(M.finalStatus(state, item), 'waiting');
+  M.replyReturn(state, state.returns.at(-1).id, '2で正しい');
+  M.submit(state, 'zeimu');
+  assert.equal(M.finalStatus(state, item), 'ok', '回答が同じまま再提出されたら、確定値はそのまま使える');
+  plan = M.outputPlan(state);
+  assert.ok(plan.writes.some((w) => w.cell === 'C16' && w.value === 6));
+});

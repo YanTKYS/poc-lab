@@ -135,6 +135,8 @@ table.grid { border-collapse: collapse; table-layout: fixed; font-size: .82rem; 
 .ans-meter { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 16px; text-align: center; }
 .ans-meter b { font-size: 1.6rem; }
 .ans-meter span, .ans-meter small { display: block; font-size: .8rem; color: var(--muted); }
+.ans-meter small.err { color: var(--err); font-weight: 700; }
+#save-alert { padding-bottom: 0; }
 .toolbar { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; position: sticky; top: 92px; background: var(--bg); z-index: 2; padding: 4px 0; border-bottom: 1px solid var(--line2); }
 .sheet-sec { margin-top: 8px; }
 .q { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; margin: 10px 0; }

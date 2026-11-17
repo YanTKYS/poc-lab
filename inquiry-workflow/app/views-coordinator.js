@@ -208,18 +208,28 @@ function reviewHtml() {
     const pos = `${esc(it.sheet)} ${esc(it.cell)}`;
     if (M.isMulti(it)) {
       const fin = st.finals[it.key];
+      const fs = M.finalStatus(st, it);
+      const ready = M.allOwnersSubmitted(st, it);
       const sug = M.mergeSuggestion(st, it);
-      const waiting = owners.filter((d) => !st.submitted[d]);
-      const caution = fin ? '' : `確定値が未設定${waiting.length ? `（未提出 ${waiting.length}課）` : ''}`;
+      const waiting = owners.filter((d) => M.deptStatus(st, d) !== 'submitted');
+      const caution = {
+        none: `確定値が未設定${waiting.length ? `（未提出・差戻し中 ${waiting.length}課）` : ''}`,
+        waiting: `確定値はありますが、未提出・差戻し中の課があるため書き出しません（${waiting.map(M.deptName).join('・')}）`,
+        stale: '確定した後に回答が変わりました。回答を見直して、確定し直してください（それまで書き出しません）',
+        ok: '',
+      }[fs];
       if (f === 'caution' ? !caution : f !== 'all' && !owners.includes(f)) continue;
-      const parts = owners.map((d) => `<li><b>${esc(M.deptName(d))}</b>：${esc(answerText(st, it, d)) || '<span class="muted">未回答</span>'}${st.submitted[d] ? '' : '<span class="muted">（未提出）</span>'}</li>`).join('');
-      rows.push(`<tr class="multi-row${caution ? ' has-caution' : ''}"><td>${pos}</td><td>${esc(it.label)}<br><span class="chip c-multi">複数${owners.length}課</span></td>
+      const stateNote = (d) => ({ submitted: '', returned: '（差戻し中）' }[M.deptStatus(st, d)] ?? '（未提出）');
+      const parts = owners.map((d) => `<li><b>${esc(M.deptName(d))}</b>：${esc(answerText(st, it, d)) || '<span class="muted">未回答</span>'}<span class="muted">${stateNote(d)}</span></li>`).join('');
+      rows.push(`<tr class="multi-row${caution ? ' has-caution' : ''}" data-final-status="${fs}"><td>${pos}</td><td>${esc(it.label)}<br><span class="chip c-multi">複数${owners.length}課</span></td>
         <td colspan="2"><ul class="parts">${parts}</ul>
           <label class="fld">確定値（原票に書く値）
             ${it.type === 'text' ? `<textarea rows="3" data-final="${esc(it.key)}">${esc(fin?.raw ?? '')}</textarea>` : `<input type="text" inputmode="decimal" data-final="${esc(it.key)}" value="${esc(fin?.raw ?? '')}">`}</label>
-          <div class="btn-row">${sug ? `<button type="button" data-act="final-suggest" data-key="${esc(it.key)}">${esc(sug.by === 'sum' ? `${sug.label}＝${sug.raw} を採用` : '各課の回答を連結して入れる')}</button>` : ''}
-            <button type="button" class="primary" data-act="final-set" data-key="${esc(it.key)}">この値で確定</button>
-            ${fin ? `<span class="okmark">確定済み</span><button type="button" class="link" data-act="final-clear" data-key="${esc(it.key)}">確定を取り消す</button>` : ''}</div></td>
+          <div class="btn-row">${sug && ready ? `<button type="button" data-act="final-suggest" data-key="${esc(it.key)}">${esc(sug.by === 'sum' ? `${sug.label}＝${sug.raw} を採用` : '各課の回答を連結して入れる')}</button>` : ''}
+            <button type="button" class="primary" data-act="final-set" data-key="${esc(it.key)}"${ready ? '' : ' disabled'}>${fs === 'stale' ? 'この値で確定し直す' : 'この値で確定'}</button>
+            ${fs === 'ok' ? '<span class="okmark">確定済み</span>' : fin ? '<span class="muted">前回の確定値（いまは使いません）</span>' : ''}
+            ${fin ? `<button type="button" class="link" data-act="final-clear" data-key="${esc(it.key)}">確定を取り消す</button>` : ''}</div>
+          ${ready ? '' : '<p class="hint">担当課がすべて提出してから確定できます。</p>'}</td>
         <td class="caution">${esc(caution)}</td></tr>`);
       continue;
     }

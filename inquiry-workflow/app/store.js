@@ -24,7 +24,8 @@ export const S = {
     onlyMissing: false,
     focusKey: null,
     output: null, // 直近の出力結果
-    savedAt: null,
+    savedAt: null, // 最後に保存できた時刻（失敗したときは更新しない）
+    saveError: false, // 直近の保存に失敗したか
   },
 };
 
@@ -42,20 +43,24 @@ export function load() {
   }
 }
 
+/** ブラウザに保存する。成功したときだけ savedAt を更新し、失敗したら saveError を立てる。 */
 export function save() {
-  S.ui.savedAt = new Date();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(S.state));
+    S.ui.savedAt = new Date();
+    S.ui.saveError = false;
     return true;
   } catch {
-    return false; // 保存できなくても、このタブを開いている間は動く
+    // 容量不足（原票が大きい等）や、保存が禁止されたブラウザ。このタブを開いている間は動くが、再読み込みで失われる
+    S.ui.saveError = true;
+    return false;
   }
 }
 
 export function reset() {
   S.state = M.newState();
   S.layout = null;
-  Object.assign(S.ui, { tab: 'assign', sheet: null, sel: null, dept: null, output: null, focusKey: null });
+  Object.assign(S.ui, { tab: 'assign', sheet: null, sel: null, dept: null, output: null, focusKey: null, saveError: false });
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* 何もしない */ }
 }
 

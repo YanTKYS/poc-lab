@@ -4,7 +4,7 @@ import { inspect, patch } from '../lib/xlsx-patch.js';
 import { verifyWriteBack } from '../lib/xlsx-verify.js';
 import * as M from './model.js';
 import { S, zip, load, save, reset, bytesToB64, sourceBytes, layout, answerUrl } from './store.js';
-import { esc, gridHtml, dialogHtml } from './ui.js';
+import { esc, gridHtml, dialogHtml, savedText } from './ui.js';
 import { coordinatorHtml, selPanelHtml, selectedKeys, addSelectedAsInput } from './views-coordinator.js';
 import { answerHtml, precheckHtml } from './views-answer.js';
 import { applySampleAssignment, applySampleSubmissions } from './sample.js';
@@ -18,6 +18,22 @@ const role = () => (S.ui.role === 'answer' ? '回答' : 'とりまとめ');
 function log(action) {
   if (S.state.inquiry) M.logAction(S.state, role(), action);
 }
+/** 保存して、その成否を画面に出す（失敗を「保存済み」と見せない）。 */
+function persist() {
+  const ok = save();
+  showSaveState();
+  return ok;
+}
+function showSaveState() {
+  const banner = document.getElementById('save-alert');
+  banner.hidden = !S.ui.saveError;
+  const s = document.getElementById('saved-at');
+  if (s) {
+    s.textContent = savedText();
+    s.classList.toggle('err', S.ui.saveError);
+  }
+}
+
 function commit(action) {
   if (action) log(action);
   // 状態が変わったら、前に出力したファイルは古くなるので表示から外す
@@ -25,7 +41,7 @@ function commit(action) {
     if (S.ui.output.url) URL.revokeObjectURL(S.ui.output.url);
     S.ui.output = null;
   }
-  save();
+  persist();
   render();
 }
 
@@ -38,6 +54,7 @@ function render() {
   const n = S.state.log.length;
   document.getElementById('log-count').textContent = n ? `（${n}件）` : '';
   if (S.ui.role === 'coordinator' && S.ui.tab === 'assign' && S.state.inquiry) markSelection();
+  showSaveState();
   window.scrollTo(0, keepScroll);
   if (S.ui.focusKey) {
     const el = app.querySelector(`[data-key="${CSS.escape(S.ui.focusKey)}"]`);
@@ -144,7 +161,13 @@ function selectByText(text) {
   const m = /^\s*([A-Za-z]{1,3})(\d+)(?:\s*[:：]\s*([A-Za-z]{1,3})(\d+))?\s*$/.exec(text);
   if (!m) return toast('範囲は「C5:D8」のように入力してください');
   const col = (s) => [...s.toUpperCase()].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
-  setSel(col(m[1]), +m[2], col(m[3] ?? m[1]), +(m[4] ?? m[2]));
+  const [c1, r1, c2, r2] = [col(m[1]), +m[2], col(m[3] ?? m[1]), +(m[4] ?? m[2])];
+  // 表示中のシートの範囲を超える指定は受け付けない（巨大な範囲を指定すると、選択の処理で画面が固まるため）
+  const sheet = layout().byName[S.ui.sheet];
+  if (Math.min(c1, c2, r1, r2) < 1 || Math.max(c1, c2) > sheet.maxCol || Math.max(r1, r2) > sheet.maxRow) {
+    return toast(`このシートの範囲外です（A1:${refOf(sheet.maxCol, sheet.maxRow)} の中で指定してください）`);
+  }
+  setSel(c1, r1, c2, r2);
 }
 
 // ---- クリック操作 -----------------------------------------------------------
@@ -181,7 +204,7 @@ const actions = {
         : M.returnText(S.state, el.dataset.dept, url);
     copyText(text);
     log({ request: '依頼文をコピー', reminder: '催促文をコピー', return: '差戻しの連絡文をコピー' }[el.dataset.copy]);
-    save();
+    persist();
     toast('コピーしました。既存のメール等に貼り付けて送ってください');
   },
   'goto-own': () => { Object.assign(S.ui, { role: 'answer', dept: M.COORDINATOR }); render(); window.scrollTo(0, 0); },
@@ -231,7 +254,8 @@ const actions = {
     const box = app.querySelector(`[data-final="${CSS.escape(it.key)}"]`);
     const p = M.parseAnswer(it, { raw: box.value, na: false });
     if (p.state !== 'ok') return toast(p.state === 'empty' ? '確定値を入力してください' : p.error);
-    M.setFinal(S.state, it.key, box.value, box.dataset.by || 'manual');
+    const r = M.setFinal(S.state, it.key, box.value, box.dataset.by || 'manual');
+    if (!r.ok) return toast(r.reason);
     commit(`複数課項目を確定 ${it.key}`);
   },
   'final-clear': (el) => { M.clearFinal(S.state, el.dataset.key); commit(`確定を取り消す ${el.dataset.key}`); },
@@ -261,7 +285,7 @@ const actions = {
     window.scrollTo(0, 0);
   },
   withdraw: () => { if (M.withdraw(S.state, S.ui.dept)) commit('提出を取り消す'); },
-  print: () => { log('回答一覧を印刷'); save(); window.print(); },
+  print: () => { log('回答一覧を印刷'); persist(); window.print(); },
   'close-dialog': () => closeDialog(),
   'download-log': () => download(new Blob([`﻿${M.logCsv(S.state)}`], { type: 'text/csv' }), 'operation-log.csv'),
   reset: () => {
@@ -283,11 +307,7 @@ document.addEventListener('click', (e) => {
 let saveTimer;
 function saveSoon() {
   clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    save();
-    const s = document.getElementById('saved-at');
-    if (s) s.textContent = `自動保存済み ${new Date().toTimeString().slice(0, 5)}`;
-  }, 300);
+  saveTimer = setTimeout(persist, 300);
 }
 function refreshField(key) {
   const dept = S.ui.dept;
@@ -350,7 +370,7 @@ app.addEventListener('change', (e) => {
     if (!it) return;
     it[el.dataset.edit] = el.value;
     log(`見出し・型を修正 ${key}`);
-    save();
+    persist();
     return toast('直しました');
   }
 });
@@ -449,4 +469,3 @@ render();
 document.body.dataset.ready = 'true';
 // 自動テスト用に状態を見せる（画面の操作には使わない）
 window.__poc = { S, M };
-export { refOf };

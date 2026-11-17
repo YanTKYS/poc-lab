@@ -192,7 +192,7 @@ test('一連の操作：割当て→回答→提出→差戻し→再提出→�
 test('対象外のファイルは登録せず、理由を示す', async ({ page }) => {
   await open(page);
   await page.setInputFiles('#file', { name: 'old.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from('これはxlsxではない') });
-  await expect(page.locator('.alert.error')).toContainText('ZIPとして開けません');
+  await expect(page.locator('#app .alert.error')).toContainText('ZIPとして開けません');
   await expect(page.locator('.tabs')).toHaveCount(0);
 });
 
@@ -215,4 +215,41 @@ test('入力はブラウザ内に保存され、再読み込みしても続き�
   await page.locator('.dept-pick button', { hasText: '税務課' }).click();
   await expect(field(page, '取組状況!C9')).toHaveValue('導入済み');
   await expect(page.locator('.dept-pick')).toHaveCount(0);
+});
+
+test('番地の直接入力は、表示中のシートの範囲内だけ受け付ける', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click();
+  await page.getByRole('tab', { name: /取組状況/ }).click();
+  await page.fill('#range-input', 'A1:XFD1048576');
+  await page.press('#range-input', 'Enter');
+  await expect(page.locator('#toast')).toContainText('このシートの範囲外です（A1:D19 の中で指定してください）');
+  await expect(page.locator('#sel-panel')).toContainText('範囲を選ぶと');
+  await page.fill('#range-input', 'C5:D8');
+  await page.press('#range-input', 'Enter');
+  await expect(page.locator('#sel-panel h2')).toContainText('入力セル 8個');
+});
+
+test('ブラウザに保存できないときは「保存済み」と見せず、警告を出す', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click();
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await tab(page, '② 依頼');
+  await page.getByRole('button', { name: '回答の受付を始める' }).click();
+  await expect(page.locator('#save-alert')).toBeHidden();
+  // 容量不足を再現する
+  await page.evaluate(() => {
+    window.__setItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => { throw new DOMException('容量不足', 'QuotaExceededError'); };
+  });
+  await pickDept(page, '税務課');
+  await field(page, '取組状況!C9').selectOption('導入済み');
+  await expect(page.locator('#saved-at')).toHaveText('保存できていません（再読み込みすると入力が失われます）');
+  await expect(page.locator('#save-alert')).toBeVisible();
+  // 保存できるようになれば、表示も戻る
+  await page.evaluate(() => { Storage.prototype.setItem = window.__setItem; });
+  await field(page, '取組状況!C10').fill('2025-04-01');
+  await expect(page.locator('#saved-at')).toContainText('自動保存済み');
+  await expect(page.locator('#save-alert')).toBeHidden();
 });
