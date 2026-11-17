@@ -8,7 +8,7 @@
 
 import {
   toText, toBytes, attr, tagEnd, encodeXmlText, hasIllegalXmlChar,
-  parseRef, inRange, readWorkbook, readCellXfs, scanSheet, dateToSerial,
+  parseRef, inRange, readWorkbook, readCellXfs, scanSheet, dateToSerial, plainSharedStringIndex,
 } from './ooxml.mjs';
 
 const err = (code, w, message) => ({ code, sheet: w?.sheet ?? null, cell: w?.cell ?? null, message });
@@ -66,9 +66,19 @@ export function patch(bytes, writes, zip, options = {}) {
 
   const xfs = files['xl/styles.xml'] ? readCellXfs(toText(files['xl/styles.xml'])) : [];
   const ssPath = Object.keys(files).find((n) => /^xl\/sharedStrings\.xml$/i.test(n));
-  const newStrings = []; // 共有文字列に追加する文字列（共有文字列を使うブックのみ）
-  let ssBase = 0;
-  if (ssPath) ssBase = (toText(files[ssPath]).match(/<si[\s>/]/g) ?? []).length;
+  // 共有文字列を使うブックでは、文字列を共有文字列の表に入れてセルから番号で参照する。
+  // 既存の項目と同じ文字列は、新しい項目を作らずその番号を使う（uniqueCount を正しく保つため）
+  const sstIndex = ssPath ? plainSharedStringIndex(toText(files[ssPath])) : null;
+  const newStrings = []; // 末尾に追加する <si>
+  const newIndex = new Map(); // 追加する文字列 → 番号
+  const sstNumberFor = (text) => {
+    if (sstIndex.plain.has(text)) return sstIndex.plain.get(text);
+    if (!newIndex.has(text)) {
+      newIndex.set(text, sstIndex.size + newStrings.length);
+      newStrings.push(`<si><t xml:space="preserve">${encodeXmlText(text)}</t></si>`);
+    }
+    return newIndex.get(text);
+  };
 
   // ---- 1. すべての書き込みを検査する（この段階では何も変えない） ----
   const bySheet = new Map();
@@ -122,12 +132,11 @@ export function patch(bytes, writes, zip, options = {}) {
     } else if (w.type === 'text') {
       if (typeof w.value !== 'string' || w.value === '') { errors.push(err('E_TYPE', w, '空でない文字列を指定してください（空欄は type:"blank"）')); continue; }
       if (hasIllegalXmlChar(w.value)) { errors.push(err('E_TYPE', w, 'XMLに書けない制御文字を含んでいます')); continue; }
-      const text = encodeXmlText(w.value.replace(/\r\n?/g, '\n'));
+      const normalized = w.value.replace(/\r\n?/g, '\n');
       if (ssPath) {
-        body = { t: 's', inner: `<v>${ssBase + newStrings.length}</v>` };
-        newStrings.push(`<si><t xml:space="preserve">${text}</t></si>`);
+        body = { t: 's', inner: `<v>${sstNumberFor(normalized)}</v>` };
       } else {
-        body = { t: 'inlineStr', inner: `<is><t xml:space="preserve">${text}</t></is>` };
+        body = { t: 'inlineStr', inner: `<is><t xml:space="preserve">${encodeXmlText(normalized)}</t></is>` };
       }
     } else {
       errors.push(err('E_TYPE', w, `未対応の型です: ${w.type}`)); continue;
@@ -176,6 +185,16 @@ export function patch(bytes, writes, zip, options = {}) {
           const next = row.cells.find((x) => parseRef(x.ref).col > c.col);
           ops.push({ at: next ? next.start : row.innerEnd, del: 0, text: c.text, order: c.col });
         }
+        // spans（行にあるセルの列の範囲。読み手への目安）が、追加したセルを含まなければ広げる
+        const open = xml.slice(row.start, row.tagEnd + 1);
+        const sp = /\sspans\s*=\s*"(\d+):(\d+)"/.exec(open);
+        if (sp) {
+          const lo = Math.min(Number(sp[1]), ...cs.map((c) => c.col));
+          const hi = Math.max(Number(sp[2]), ...cs.map((c) => c.col));
+          if (lo !== Number(sp[1]) || hi !== Number(sp[2])) {
+            ops.push({ at: row.start, del: open.length, text: open.replace(sp[0], ` spans="${lo}:${hi}"`) });
+          }
+        }
       }
     }
     if (ops.length) opsByPath.set(path, ops);
@@ -215,9 +234,16 @@ export function patch(bytes, writes, zip, options = {}) {
     report.changedParts.push(path);
   }
 
-  if (wrote && newStrings.length) {
-    out[ssPath] = toBytes(appendSharedStrings(toText(files[ssPath]), newStrings));
-    report.changedParts.push(ssPath);
+  if (wrote && ssPath) {
+    // count は「文字列セルの参照の総数」。書き換えたシートで、書き換え前後の参照数の差だけ増減させる
+    // （既存の文字列セルの置換では増えず、消去では減る）。uniqueCount は項目数なので、追加した項目の数だけ増やす
+    let refsDelta = 0;
+    for (const path of opsByPath.keys()) refsDelta += countSharedRefs(toText(out[path])) - countSharedRefs(bySheet.get(path).xml);
+    report.sharedStrings = { appended: newStrings.length, refsDelta };
+    if (newStrings.length || refsDelta !== 0) {
+      out[ssPath] = toBytes(updateSharedStrings(toText(files[ssPath]), newStrings, refsDelta));
+      report.changedParts.push(ssPath);
+    }
   }
   if (wrote && recalcOnLoad) {
     const before = toText(files[workbook.workbookPath]);
@@ -245,13 +271,16 @@ function buildCell(attrs, body) {
   return `<c${attrs}${body.t ? ` t="${body.t}"` : ''}>${body.inner}</c>`;
 }
 
-function appendSharedStrings(xml, items) {
+const countSharedRefs = (xml) => [...scanSheet(xml).cells.values()].filter((c) => c.t === 's').length;
+
+/** 共有文字列の表に項目を追加し、count・uniqueCount（元にある場合だけ）を増減させる。 */
+function updateSharedStrings(xml, items, refsDelta) {
   const start = xml.search(/<sst[\s>]/);
   const te = tagEnd(xml, start);
   let tag = xml.slice(start, te + 1);
-  for (const name of ['count', 'uniqueCount']) {
+  for (const [name, delta] of [['count', refsDelta], ['uniqueCount', items.length]]) {
     const v = attr(tag, name);
-    if (v != null) tag = tag.replace(new RegExp(`(\\s${name}\\s*=\\s*")[^"]*(")`), `$1${Number(v) + items.length}$2`);
+    if (v != null) tag = tag.replace(new RegExp(`(\\s${name}\\s*=\\s*")[^"]*(")`), `$1${Math.max(0, Number(v) + delta)}$2`);
   }
   let rest = xml.slice(te + 1);
   if (tag.endsWith('/>')) {

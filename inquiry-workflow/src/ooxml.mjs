@@ -226,6 +226,26 @@ export function readSharedStrings(xml) {
   return out;
 }
 
+/**
+ * 共有文字列の項目数と、再利用できる項目（書式なしで <t> が1つだけの項目）の「文字列 → 番号」の表を返す。
+ * 前後に空白のある文字列は、項目が xml:space="preserve" を持つときだけ再利用できる
+ * （持たない項目では、読み手が空白を落としてもよいため）。
+ */
+export function plainSharedStringIndex(xml) {
+  const plain = new Map();
+  let size = 0;
+  for (const m of xml.matchAll(/<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g)) {
+    const t = m[1] == null ? null : /^<t(\s[^>]*)?>([^<]*)<\/t>$/.exec(m[1]);
+    if (t) {
+      const text = decodeXml(t[2]);
+      const preserve = /xml:space\s*=\s*["']preserve["']/.test(t[1] ?? '');
+      if ((preserve || text === text.trim()) && !plain.has(text)) plain.set(text, size);
+    }
+    size++;
+  }
+  return { size, plain };
+}
+
 /** <si> や <is> の中身から表示文字列を取り出す（ふりがな rPh は除く）。 */
 export function siText(inner) {
   const noPh = inner.replace(/<rPh\b[\s\S]*?<\/rPh>/g, '');

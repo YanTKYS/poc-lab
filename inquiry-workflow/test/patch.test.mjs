@@ -185,3 +185,120 @@ test('日付の表示形式を見分ける', () => {
   for (const c of ['yyyy/m/d', 'yyyy"年"m"月"d"日"', 'yyyy\\年m\\月d\\日', '[$-411]ggge"年"m"月"d"日"', 'h:mm']) assert.equal(isDateFormatCode(c), true, c);
   for (const c of ['General', '#,##0', '0.0%', '0.00E+00', '@', '#,##0"円"', '[Red]#,##0']) assert.equal(isDateFormatCode(c), false, c);
 });
+
+// ---- 共有文字列の count / uniqueCount（既存セルの置換・消去でも、参照数・項目数と一致すること） ----
+const SST_NS = 'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+const sst = (count, unique, items) => `<sst ${SST_NS}${count == null ? '' : ` count="${count}"`}${unique == null ? '' : ` uniqueCount="${unique}"`}>${items.join('')}</sst>`;
+const sstText = (bytes) => strFromU8(zip.unzip(bytes)['xl/sharedStrings.xml']);
+const sstNums = (bytes) => {
+  const t = sstText(bytes);
+  return { count: +/\scount="(\d+)"/.exec(t)?.[1], unique: +/uniqueCount="(\d+)"/.exec(t)?.[1], items: (t.match(/<si[\s>]/g) ?? []).length };
+};
+// A1・C1 は項目0「見出し」、B1 は項目1「B」を参照（参照3・項目2）。A2 は空
+const sharedBook = (items = ['<si><t>見出し</t></si>', '<si><t>B</t></si>'], count = 3, unique = 2) =>
+  miniBook('<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>0</v></c></row><row r="2"><c r="A2"/></row>', {
+    shared: sst(count, unique, items),
+  });
+
+test('共有文字列：既存の文字列セルを別の文字列に置換しても count は増えず、uniqueCount だけ増える', () => {
+  const book = sharedBook();
+  const w = [W('A1', 'text', 'X')];
+  const r = patch(book, w, zip);
+  assert.deepEqual(sstNums(r.bytes), { count: 3, unique: 3, items: 3 });
+  assert.match(sheetXml(r.bytes), /<c r="A1" t="s"><v>2<\/v><\/c>/);
+  assert.deepEqual(verifyWriteBack(book, r.bytes, w, zip).problems, []);
+});
+
+test('共有文字列：既存と同じ文字列は新しい項目を作らず、既存の項目を参照する', () => {
+  const book = sharedBook();
+  const w = [W('A1', 'text', 'B')]; // A1 の置換。参照数は変わらず、項目も増えない
+  const r = patch(book, w, zip);
+  assert.equal(sstText(r.bytes), sstText(book), '共有文字列の部品が1バイトも変わらない');
+  assert.equal(r.report.changedParts.includes('xl/sharedStrings.xml'), false);
+  assert.match(sheetXml(r.bytes), /<c r="A1" t="s"><v>1<\/v><\/c>/);
+  assert.deepEqual(verifyWriteBack(book, r.bytes, w, zip).problems, []);
+});
+
+test('共有文字列：文字列セルを空欄・数値にすると count が減る', () => {
+  const book = sharedBook();
+  for (const [w, count] of [[W('B1', 'blank'), 2], [W('A1', 'number', 7), 2]]) {
+    const r = patch(book, [w], zip);
+    assert.deepEqual(sstNums(r.bytes), { count, unique: 2, items: 2 }, JSON.stringify(w));
+    assert.deepEqual(verifyWriteBack(book, r.bytes, [w], zip).problems, [], JSON.stringify(w));
+  }
+  const both = [W('A1', 'blank'), W('B1', 'blank'), W('C1', 'blank')];
+  assert.equal(sstNums(patch(sharedBook(), both, zip).bytes).count, 0);
+});
+
+test('共有文字列：空だったセルへの追加は count が増える。同じ新しい文字列は1項目にまとめる', () => {
+  const book = sharedBook();
+  const w1 = [W('A2', 'text', 'B')]; // 既存の項目を参照するだけ
+  const r1 = patch(book, w1, zip);
+  assert.deepEqual(sstNums(r1.bytes), { count: 4, unique: 2, items: 2 });
+  const w2 = [W('A2', 'text', 'Z'), W('B2', 'text', 'Z'), W('C2', 'text', 'Z')]; // B2・C2 は行に無いセル
+  const r2 = patch(book, w2, zip);
+  assert.deepEqual(sstNums(r2.bytes), { count: 6, unique: 3, items: 3 });
+  assert.equal([...sheetXml(r2.bytes).matchAll(/<v>2<\/v>/g)].length, 3, '3セルとも同じ項目（2）を参照');
+  assert.deepEqual(verifyWriteBack(book, r2.bytes, w2, zip).problems, []);
+});
+
+test('共有文字列：前後に空白のある既存項目（xml:space なし）は、空白が保たれないので再利用しない', () => {
+  const book = sharedBook(['<si><t>見出し</t></si>', '<si><t>a </t></si>']);
+  const w = [W('A2', 'text', 'a ')];
+  const r = patch(book, w, zip);
+  assert.deepEqual(sstNums(r.bytes), { count: 4, unique: 3, items: 3 });
+  assert.deepEqual(verifyWriteBack(book, r.bytes, w, zip).problems, []);
+});
+
+test('共有文字列：書式付き文字列の項目は再利用せず、count・uniqueCount の無い部品には属性を足さない', () => {
+  const rich = '<si><r><rPr><b/></rPr><t>太字</t></r></si>';
+  const book = sharedBook(['<si><t>見出し</t></si>', rich], null, null);
+  const w = [W('A2', 'text', '太字')];
+  const r = patch(book, w, zip);
+  assert.equal(sstText(r.bytes), `<sst ${SST_NS}><si><t>見出し</t></si>${rich}<si><t xml:space="preserve">太字</t></si></sst>`);
+  assert.deepEqual(verifyWriteBack(book, r.bytes, w, zip).problems, []);
+});
+
+test('共有文字列：照合は count・uniqueCount のずれを検出する', () => {
+  const book = sharedBook();
+  const w = [W('A1', 'text', 'X')];
+  const out = zip.unzip(patch(book, w, zip).bytes);
+  const bad = (fn) => verifyWriteBack(book, zip.zip({ ...out, 'xl/sharedStrings.xml': strToU8(fn(strFromU8(out['xl/sharedStrings.xml']))) }), w, zip);
+  assert.equal(bad((x) => x).ok, true);
+  assert.equal(bad((x) => x.replace('count="3"', 'count="4"')).ok, false, 'count が実際より多い');
+  assert.equal(bad((x) => x.replace('uniqueCount="3"', 'uniqueCount="4"')).ok, false, 'uniqueCount が実際より多い');
+  assert.equal(bad((x) => x.replace('count="3"', 'count="2"')).ok, false, 'count が実際より少ない');
+});
+
+// ---- 行の属性・内容（<sheetData> 内のセル以外）も照合の対象 ----
+for (const id of FIXTURES) {
+  test(`${id}: 照合は、行の高さ・非表示などの行属性の改変、行の削除・追加を検出する`, () => {
+    const orig = rd(`fixtures/${id}.xlsx`);
+    const out = patch(orig, answers, zip).bytes;
+    const path = inspect(orig, zip).sheets.find((s) => s.name === '施設別実績').path;
+    const tamper = (fn) => {
+      const files = zip.unzip(out);
+      files[path] = strToU8(fn(strFromU8(files[path])));
+      return verifyWriteBack(orig, zip.zip(files), answers, zip);
+    };
+    const rowTag = (x, r) => new RegExp(`<row r="${r}"[^>]*>`).exec(x)[0];
+    assert.equal(tamper((x) => x).ok, true);
+    const hidden = tamper((x) => x.replace(rowTag(x, 5), rowTag(x, 5).replace(`<row r="5"`, `<row r="5" hidden="1"`)));
+    assert.equal(hidden.ok, false, '行を非表示にする');
+    assert.ok(hidden.problems.some((p) => /行5/.test(p)), hidden.problems.join(' / '));
+    assert.equal(tamper((x) => x.replace(rowTag(x, 6), rowTag(x, 6).replace(/>$/, ' ht="40" customHeight="1">'))).ok, false, '行の高さを変える');
+    assert.equal(tamper((x) => x.replace(/<row r="7"[\s\S]*?<\/row>/, '')).ok, false, '行ごと削除する');
+    assert.equal(tamper((x) => x.replace('</sheetData>', '<row r="20"><c r="A20"><v>1</v></c></row></sheetData>')).ok, false, '対象外の行を追加する');
+  });
+}
+
+test('行：spans は、書き込んだセルが範囲外なら広げる。照合は spans がセルを覆っていることを確かめる', () => {
+  const book = miniBook('<row r="2" spans="2:3" ht="20" customHeight="1"><c r="B2"><v>1</v></c></row>');
+  const w = [W('E2', 'number', 5), W('A2', 'number', 9)];
+  const r = patch(book, w, zip);
+  assert.equal(sheetXml(r.bytes), '<row r="2" spans="1:5" ht="20" customHeight="1"><c r="A2"><v>9</v></c><c r="B2"><v>1</v></c><c r="E2"><v>5</v></c></row>');
+  assert.deepEqual(verifyWriteBack(book, r.bytes, w, zip).problems, []);
+  const files = zip.unzip(r.bytes);
+  files['xl/worksheets/sheet1.xml'] = strToU8(strFromU8(files['xl/worksheets/sheet1.xml']).replace('spans="1:5"', 'spans="2:3"'));
+  assert.equal(verifyWriteBack(book, zip.zip(files), w, zip).ok, false);
+});

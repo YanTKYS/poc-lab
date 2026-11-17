@@ -5,7 +5,7 @@
 // ここで保証できるのはファイルの中身（XML）の範囲まで。
 // Excelがどう表示・再計算するかは保証しない（READMEの「自動照合で保証できること」参照）。
 
-import { toText, readWorkbook, scanSheet, readSharedStrings, cellValue, dateToSerial } from './ooxml.mjs';
+import { toText, attr, parseRef, readWorkbook, scanSheet, readSharedStrings, cellValue, dateToSerial } from './ooxml.mjs';
 
 const same = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
 
@@ -20,6 +20,34 @@ export function compareParts(origFiles, outFiles) {
   }
   for (const n of Object.keys(outFiles)) if (!isDir(n) && !(n in origFiles)) r.added.push(n);
   return r;
+}
+
+/**
+ * <sheetData> の「セル以外」を行ごとに取り出す（行の開始タグ＝高さ・非表示などの属性、行の中のセル以外の内容、行どうしの間）。
+ * spans（行にあるセルの列の範囲を示す目安の属性）は、セルを足すと変わってよいので比較から外す
+ * （代わりに、セルを覆っていることを別に確かめる）。
+ */
+function rowLayout(xml, scan) {
+  const norm = (tag) => tag.replace(/\s*\/>$/, '>').replace(/\sspans\s*=\s*"[^"]*"/, '');
+  const rows = new Map();
+  const order = [];
+  let gaps = '';
+  let p = scan.sheetData.tagEnd + 1;
+  for (const row of scan.rows) {
+    gaps += xml.slice(p, row.start);
+    let inner = '';
+    if (!row.selfClosing) {
+      let q = row.tagEnd + 1;
+      for (const c of row.cells) { inner += xml.slice(q, c.start); q = c.end; }
+      inner += xml.slice(q, row.innerEnd);
+    }
+    const raw = xml.slice(row.start, row.tagEnd + 1);
+    rows.set(row.r, { open: norm(raw), inner, spans: /\sspans\s*=\s*"(\d+):(\d+)"/.exec(raw), cells: row.cells.map((c) => c.ref) });
+    order.push(row.r);
+    p = row.end;
+  }
+  gaps += xml.slice(p, scan.sheetData.innerEnd ?? p);
+  return { sdOpen: xml.slice(scan.sheetData.start, scan.sheetData.tagEnd + 1), rows, order, gaps };
 }
 
 /** シート1枚の全セルを {ref → {raw, s, ...value}} にする。 */
@@ -81,6 +109,9 @@ export function verifyWriteBack(origBytes, outBytes, writes, zip) {
   let untouchedCells = 0;
   let formulaCells = 0;
   let formulaResultsCleared = 0;
+  let sharedRefsOrig = 0;
+  let sharedRefsOut = 0;
+  let rowsChecked = 0;
   // 数式セルは「数式（<f>）と書式が同じで、計算結果（<v>）だけが消えている」変化だけを認める
   const fOf = (c) => /<f\b[^>]*?(?:\/>|>[\s\S]*?<\/f>)/.exec(c.inner)?.[0];
   const noT = (attrs) => attrs.replace(/\s+t\s*=\s*"[^"]*"/, '').trim();
@@ -97,6 +128,34 @@ export function verifyWriteBack(origBytes, outBytes, writes, zip) {
     if (outside(ox, o.scan) !== outside(nx, n.scan)) problems.push(`${sh.name}: セル以外の部分が変わっています`);
 
     const targets = new Map(writes.filter((w) => w.sheet === sh.name).map((w) => [w.cell, w]));
+
+    // <sheetData> の中のセル以外（行の高さ・非表示・書式などの行属性）も同じであること。
+    // 増えてよいのは、書き込みのために追加した行（<row r="N"> にセルだけが入ったもの）だけ
+    const lo = rowLayout(ox, o.scan);
+    const ln = rowLayout(nx, n.scan);
+    if (lo.sdOpen !== ln.sdOpen || lo.gaps !== ln.gaps) problems.push(`${sh.name}: 行と行のあいだの内容が変わっています`);
+    const targetRows = new Set([...targets.keys()].map((ref) => parseRef(ref)?.row));
+    for (const [r, a] of lo.rows) {
+      const b = ln.rows.get(r);
+      if (!b) problems.push(`${sh.name}: 行${r}が消えています`);
+      else if (a.open !== b.open) problems.push(`${sh.name}: 行${r}の属性が変わっています（旧 ${a.open} → 新 ${b.open}）`);
+      else if (a.inner !== b.inner) problems.push(`${sh.name}: 行${r}のセル以外の内容が変わっています`);
+    }
+    for (const [r, b] of ln.rows) {
+      if (lo.rows.has(r)) continue;
+      if (!targetRows.has(r) || b.open !== `<row r="${r}">` || b.inner !== '') problems.push(`${sh.name}: 書き込み対象ではない行${r}が追加されています`);
+    }
+    if (ln.order.some((r, i) => i > 0 && r <= ln.order[i - 1])) problems.push(`${sh.name}: 行の順序が昇順ではありません`);
+    for (const [r, b] of ln.rows) {
+      const cols = b.cells.map((ref) => parseRef(ref));
+      if (cols.some((c) => !c || c.row !== r)) problems.push(`${sh.name}: 行${r}に、別の行のセルが入っています`);
+      else if (cols.some((c, i) => i > 0 && c.col <= cols[i - 1].col)) problems.push(`${sh.name}: 行${r}のセルが列の昇順ではありません`);
+      else if (b.spans && cols.some((c) => c.col < Number(b.spans[1]) || c.col > Number(b.spans[2]))) problems.push(`${sh.name}: 行${r}の spans が、行にあるセルを含んでいません`);
+    }
+    rowsChecked += lo.rows.size;
+    sharedRefsOrig += [...o.scan.cells.values()].filter((c) => c.t === 's').length;
+    sharedRefsOut += [...n.scan.cells.values()].filter((c) => c.t === 's').length;
+
     for (const ref of new Set([...o.map.keys(), ...n.map.keys()])) {
       const a = o.map.get(ref);
       const b = n.map.get(ref);
@@ -118,12 +177,28 @@ export function verifyWriteBack(origBytes, outBytes, writes, zip) {
         problems.push(`${sh.name}!${ref}: 値が違います（期待 ${want.kind}:${JSON.stringify(want.value)} / 実際 ${got.kind}:${JSON.stringify(got.value)}）`);
       }
     }
+    for (const [ref, b] of n.map) if (b.kind === 'string' && b.value === undefined) problems.push(`${sh.name}!${ref}: 共有文字列の番号が表の範囲外です`);
     for (const [ref] of targets) if (!o.map.has(ref) && !n.map.has(ref) && targets.get(ref).type !== 'blank') problems.push(`${sh.name}!${ref}: 書かれていません`);
+  }
+  // 共有文字列の count（文字列セルの参照の総数）と uniqueCount（項目数）が、実際の増減と合っていること
+  if (orig[ssPath] && out[ssPath]) {
+    const head = (bytes) => {
+      const tag = /<sst\b[^>]*>/.exec(toText(bytes))?.[0] ?? '';
+      return { count: attr(tag, 'count'), unique: attr(tag, 'uniqueCount') };
+    };
+    const ho = head(orig[ssPath]);
+    const hn = head(out[ssPath]);
+    const want = { count: sharedRefsOut - sharedRefsOrig, unique: sharedOut.length - sharedOrig.length };
+    for (const [key, label] of [['count', 'count（参照の総数）'], ['unique', 'uniqueCount（項目数）']]) {
+      if (ho[key] != null && Number(hn[key]) !== Math.max(0, Number(ho[key]) + want[key])) {
+        problems.push(`共有文字列の${label}が実際の増減と合っていません（元 ${ho[key]}、増減 ${want[key]}、出力 ${hn[key]}）`);
+      }
+    }
   }
   return {
     ok: problems.length === 0,
     problems,
-    summary: { parts: { same: parts.same.length, changed: parts.changed, added: parts.added, removed: parts.removed }, checkedCells, untouchedCells, formulaCells, formulaResultsCleared },
+    summary: { rowsChecked, parts: { same: parts.same.length, changed: parts.changed, added: parts.added, removed: parts.removed }, checkedCells, untouchedCells, formulaCells, formulaResultsCleared },
   };
 }
 

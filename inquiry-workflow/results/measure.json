@@ -28,6 +28,7 @@
     "verify": {
      "ok": true,
      "problems": [],
+     "rowsChecked": 42,
      "parts": {
       "same": 13,
       "changed": [
@@ -58,6 +59,7 @@
     "verify": {
      "ok": true,
      "problems": [],
+     "rowsChecked": 42,
      "parts": {
       "same": 13,
       "changed": [
@@ -129,6 +131,7 @@
     "verify": {
      "ok": true,
      "problems": [],
+     "rowsChecked": 42,
      "parts": {
       "same": 13,
       "changed": [
@@ -155,6 +158,7 @@
     "verify": {
      "ok": true,
      "problems": [],
+     "rowsChecked": 42,
      "parts": {
       "same": 13,
       "changed": [
