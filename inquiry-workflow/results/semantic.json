@@ -1,0 +1,1288 @@
+{
+ "generatedBy": "tools/semantic_compare.py",
+ "features": {
+  "cells": "セルの値・数式",
+  "number_format": "表示形式",
+  "font_fill_border": "フォント・塗り・罫線",
+  "alignment": "配置・折り返し",
+  "cell_lock": "セルのロック設定",
+  "merges": "結合セル",
+  "validations": "入力規則",
+  "cond_fmt": "条件付き書式",
+  "protection": "シート保護",
+  "col_widths": "列幅",
+  "row_heights": "行の高さ",
+  "freeze": "ウィンドウ枠の固定",
+  "print": "印刷範囲・用紙の向き",
+  "defined_names": "名前の定義",
+  "comments": "コメント（メモ）",
+  "shape": "図形（テキストボックス）",
+  "doc_props": "文書のプロパティ"
+ },
+ "fixtures": {
+  "genpyo-lo": {
+   "label": "LibreOffice保存",
+   "outputs": {
+    "B-nochange": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     }
+    },
+    "B-writeback": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     },
+     "answers": {
+      "checked": 62,
+      "mismatches": []
+     }
+    },
+    "A-nochange": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": false,
+       "diffs": 5,
+       "samples": [
+        [
+         "基本情報!D9",
+         "yyyy\\年m\\月d\\日",
+         "yyyy年m月d日"
+        ],
+        [
+         "記入要領!A3",
+         "General",
+         null
+        ],
+        [
+         "記入要領!A4",
+         "General",
+         null
+        ]
+       ]
+      },
+      "font_fill_border": {
+       "same": false,
+       "diffs": 4,
+       "samples": [
+        [
+         "記入要領!A3",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ],
+        [
+         "記入要領!A4",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ],
+        [
+         "記入要領!A5",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ]
+       ]
+      },
+      "alignment": {
+       "same": false,
+       "diffs": 141,
+       "samples": [
+        [
+         "取組状況!A10",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ],
+        [
+         "取組状況!A11",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ],
+        [
+         "取組状況!A12",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ]
+       ]
+      },
+      "cell_lock": {
+       "same": false,
+       "diffs": 80,
+       "samples": [
+        [
+         "取組状況!C10",
+         false,
+         true
+        ],
+        [
+         "取組状況!C11",
+         false,
+         true
+        ],
+        [
+         "取組状況!C12",
+         false,
+         true
+        ]
+       ]
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "取組状況",
+         [
+          [
+           "C10",
+           "date",
+           "greaterThan",
+           "36526",
+           "0"
+          ],
+          [
+           "C11",
+           "list",
+           "between",
+           "記入要領!$H$2:$H$4",
+           "0"
+          ],
+          [
+           "C13",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C14",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C5 C15",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C6",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C7",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C8",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C9",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ]
+         ],
+         [
+          [
+           "C10",
+           "date",
+           "greaterThan",
+           "36526",
+           "0"
+          ],
+          [
+           "C11",
+           "list",
+           null,
+           "記入要領!$H$2:$H$4",
+           "0"
+          ],
+          [
+           "C13:C14",
+           "list",
+           null,
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C15",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C5",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C6:C9",
+           "list",
+           null,
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ]
+         ]
+        ]
+       ]
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "基本情報",
+         [
+          true,
+          true
+         ],
+         [
+          false,
+          false
+         ]
+        ]
+       ]
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "textbox",
+         true,
+         false
+        ]
+       ]
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     }
+    },
+    "A-writeback": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": false,
+       "diffs": 5,
+       "samples": [
+        [
+         "基本情報!D9",
+         "yyyy\\年m\\月d\\日",
+         "yyyy年m月d日"
+        ],
+        [
+         "記入要領!A3",
+         "General",
+         null
+        ],
+        [
+         "記入要領!A4",
+         "General",
+         null
+        ]
+       ]
+      },
+      "font_fill_border": {
+       "same": false,
+       "diffs": 4,
+       "samples": [
+        [
+         "記入要領!A3",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ],
+        [
+         "記入要領!A4",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ],
+        [
+         "記入要領!A5",
+         [
+          false,
+          11.0,
+          null,
+          null,
+          [
+           null,
+           null,
+           null,
+           null
+          ]
+         ],
+         null
+        ]
+       ]
+      },
+      "alignment": {
+       "same": false,
+       "diffs": 141,
+       "samples": [
+        [
+         "取組状況!A10",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ],
+        [
+         "取組状況!A11",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ],
+        [
+         "取組状況!A12",
+         [
+          "general",
+          "top",
+          true
+         ],
+         [
+          null,
+          "top",
+          true
+         ]
+        ]
+       ]
+      },
+      "cell_lock": {
+       "same": false,
+       "diffs": 80,
+       "samples": [
+        [
+         "取組状況!C10",
+         false,
+         true
+        ],
+        [
+         "取組状況!C11",
+         false,
+         true
+        ],
+        [
+         "取組状況!C12",
+         false,
+         true
+        ]
+       ]
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "取組状況",
+         [
+          [
+           "C10",
+           "date",
+           "greaterThan",
+           "36526",
+           "0"
+          ],
+          [
+           "C11",
+           "list",
+           "between",
+           "記入要領!$H$2:$H$4",
+           "0"
+          ],
+          [
+           "C13",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C14",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C5 C15",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C6",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C7",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C8",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C9",
+           "list",
+           "between",
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ]
+         ],
+         [
+          [
+           "C10",
+           "date",
+           "greaterThan",
+           "36526",
+           "0"
+          ],
+          [
+           "C11",
+           "list",
+           null,
+           "記入要領!$H$2:$H$4",
+           "0"
+          ],
+          [
+           "C13:C14",
+           "list",
+           null,
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ],
+          [
+           "C15",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C5",
+           "whole",
+           "greaterThanOrEqual",
+           "0",
+           "0"
+          ],
+          [
+           "C6:C9",
+           "list",
+           null,
+           "\"導入済み,導入予定,未導入\"",
+           "0"
+          ]
+         ]
+        ]
+       ]
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "基本情報",
+         [
+          true,
+          true
+         ],
+         [
+          false,
+          false
+         ]
+        ]
+       ]
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "textbox",
+         true,
+         false
+        ]
+       ]
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     },
+     "answers": {
+      "checked": 62,
+      "mismatches": []
+     }
+    },
+    "P-nochange": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "textbox",
+         true,
+         false
+        ]
+       ]
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     }
+    }
+   }
+  },
+  "genpyo": {
+   "label": "openpyxl生成",
+   "outputs": {
+    "B-nochange": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     }
+    },
+    "B-writeback": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     },
+     "answers": {
+      "checked": 62,
+      "mismatches": []
+     }
+    },
+    "A-nochange": {
+     "exists": false
+    },
+    "A-writeback": {
+     "exists": false
+    },
+    "P-nochange": {
+     "exists": true,
+     "features": {
+      "cells": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "number_format": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "font_fill_border": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "alignment": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cell_lock": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "merges": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "validations": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "cond_fmt": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "protection": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "col_widths": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "row_heights": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "freeze": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "print": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "defined_names": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "comments": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      },
+      "shape": {
+       "same": false,
+       "diffs": 1,
+       "samples": [
+        [
+         "textbox",
+         true,
+         false
+        ]
+       ]
+      },
+      "doc_props": {
+       "same": true,
+       "diffs": 0,
+       "samples": []
+      }
+     }
+    }
+   }
+  }
+ }
+}

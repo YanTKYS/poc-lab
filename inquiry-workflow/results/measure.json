@@ -1,0 +1,278 @@
+{
+ "generatedBy": "tools/measure.mjs",
+ "versions": {
+  "node": "v22.23.4",
+  "exceljs": "4.4.0",
+  "fflate": "0.8.3"
+ },
+ "fixtures": {
+  "genpyo-lo": {
+   "label": "LibreOffice保存",
+   "B_nochange": {
+    "ok": true,
+    "parts": {
+     "same": 18,
+     "changed": [],
+     "added": [],
+     "removed": []
+    },
+    "zipBytesIdentical": false
+   },
+   "B_writeback": {
+    "ok": true,
+    "warnings": [],
+    "actions": {
+     "replaced": 58,
+     "unchanged": 4
+    },
+    "verify": {
+     "ok": true,
+     "problems": [],
+     "parts": {
+      "same": 13,
+      "changed": [
+       "xl/workbook.xml",
+       "xl/worksheets/sheet2.xml",
+       "xl/worksheets/sheet3.xml",
+       "xl/worksheets/sheet4.xml",
+       "xl/sharedStrings.xml"
+      ],
+      "added": [],
+      "removed": []
+     },
+     "checkedCells": 62,
+     "untouchedCells": 115,
+     "formulaCells": 16,
+     "formulaResultsCleared": 16
+    },
+    "formulaResultsCleared": 16,
+    "rereadExcelJS": {
+     "loaded": true,
+     "targetCells": 62,
+     "otherCells": 91,
+     "mismatches": []
+    }
+   },
+   "B_writeback_keepresults": {
+    "ok": true,
+    "verify": {
+     "ok": true,
+     "problems": [],
+     "parts": {
+      "same": 13,
+      "changed": [
+       "xl/workbook.xml",
+       "xl/worksheets/sheet2.xml",
+       "xl/worksheets/sheet3.xml",
+       "xl/worksheets/sheet4.xml",
+       "xl/sharedStrings.xml"
+      ],
+      "added": [],
+      "removed": []
+     },
+     "checkedCells": 62,
+     "untouchedCells": 131,
+     "formulaCells": 16,
+     "formulaResultsCleared": 0
+    }
+   },
+   "A_nochange": {
+    "loaded": true,
+    "parts": {
+     "same": 1,
+     "changed": [
+      "xl/_rels/workbook.xml.rels",
+      "xl/workbook.xml",
+      "xl/comments3.xml",
+      "xl/styles.xml",
+      "xl/worksheets/_rels/sheet3.xml.rels",
+      "xl/worksheets/sheet1.xml",
+      "xl/worksheets/sheet2.xml",
+      "xl/worksheets/sheet3.xml",
+      "xl/worksheets/sheet4.xml",
+      "xl/sharedStrings.xml",
+      "_rels/.rels",
+      "docProps/core.xml",
+      "docProps/app.xml",
+      "[Content_Types].xml"
+     ],
+     "added": [
+      "xl/drawings/vmlDrawing3.vml"
+     ],
+     "removed": [
+      "xl/drawings/drawing1.xml",
+      "xl/drawings/vmlDrawing1.vml",
+      "docProps/custom.xml"
+     ]
+    }
+   }
+  },
+  "genpyo": {
+   "label": "openpyxl生成",
+   "B_nochange": {
+    "ok": true,
+    "parts": {
+     "same": 16,
+     "changed": [],
+     "added": [],
+     "removed": []
+    },
+    "zipBytesIdentical": false
+   },
+   "B_writeback": {
+    "ok": true,
+    "warnings": [],
+    "actions": {
+     "replaced": 58,
+     "unchanged": 4
+    },
+    "verify": {
+     "ok": true,
+     "problems": [],
+     "parts": {
+      "same": 13,
+      "changed": [
+       "xl/worksheets/sheet2.xml",
+       "xl/worksheets/sheet3.xml",
+       "xl/worksheets/sheet4.xml"
+      ],
+      "added": [],
+      "removed": []
+     },
+     "checkedCells": 62,
+     "untouchedCells": 95,
+     "formulaCells": 16,
+     "formulaResultsCleared": 16
+    },
+    "formulaResultsCleared": 16,
+    "rereadExcelJS": {
+     "loaded": false,
+     "error": "Cannot read properties of undefined (reading 'comments')"
+    }
+   },
+   "B_writeback_keepresults": {
+    "ok": true,
+    "verify": {
+     "ok": true,
+     "problems": [],
+     "parts": {
+      "same": 13,
+      "changed": [
+       "xl/worksheets/sheet2.xml",
+       "xl/worksheets/sheet3.xml",
+       "xl/worksheets/sheet4.xml"
+      ],
+      "added": [],
+      "removed": []
+     },
+     "checkedCells": 62,
+     "untouchedCells": 111,
+     "formulaCells": 16,
+     "formulaResultsCleared": 0
+    }
+   },
+   "A_nochange": {
+    "loaded": false,
+    "error": "Cannot read properties of undefined (reading 'comments')"
+   }
+  }
+ },
+ "refusals": [
+  {
+   "name": "数式セル",
+   "expected": "E_FORMULA",
+   "got": [
+    "E_FORMULA"
+   ],
+   "refused": true
+  },
+  {
+   "name": "結合セルの左上以外",
+   "expected": "E_MERGE",
+   "got": [
+    "E_MERGE"
+   ],
+   "refused": true
+  },
+  {
+   "name": "保護シートのロックされたセル（見出し）",
+   "expected": "E_LOCKED",
+   "got": [
+    "E_LOCKED"
+   ],
+   "refused": true
+  },
+  {
+   "name": "存在しないシート",
+   "expected": "E_SHEET",
+   "got": [
+    "E_SHEET"
+   ],
+   "refused": true
+  },
+  {
+   "name": "不正なセル番地",
+   "expected": "E_REF",
+   "got": [
+    "E_REF"
+   ],
+   "refused": true
+  },
+  {
+   "name": "使用範囲の外",
+   "expected": "E_RANGE",
+   "got": [
+    "E_RANGE"
+   ],
+   "refused": true
+  },
+  {
+   "name": "日付書式でないセルへの日付",
+   "expected": "E_DATEFMT",
+   "got": [
+    "E_DATEFMT"
+   ],
+   "refused": true
+  },
+  {
+   "name": "存在しない日付",
+   "expected": "E_TYPE",
+   "got": [
+    "E_TYPE"
+   ],
+   "refused": true
+  },
+  {
+   "name": "数値でない値",
+   "expected": "E_TYPE",
+   "got": [
+    "E_TYPE"
+   ],
+   "refused": true
+  },
+  {
+   "name": "XMLに書けない制御文字",
+   "expected": "E_TYPE",
+   "got": [
+    "E_TYPE"
+   ],
+   "refused": true
+  },
+  {
+   "name": "ZIPでないファイル（旧.xls等）",
+   "expected": "E_NOT_XLSX",
+   "got": [
+    "E_NOT_XLSX"
+   ],
+   "refused": true
+  },
+  {
+   "name": "マクロ付きブック",
+   "expected": "E_MACRO",
+   "got": [
+    "E_MACRO"
+   ],
+   "refused": true
+  }
+ ]
+}

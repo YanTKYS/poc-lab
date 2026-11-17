@@ -1,0 +1,26 @@
+{
+ "generatedBy": "tools/browser-check.mjs",
+ "chromium": "153.0.8010.12",
+ "externalRequests": [],
+ "pageErrors": [],
+ "fixtures": {
+  "genpyo-lo": {
+   "ok": true,
+   "verifyOk": true,
+   "problems": [],
+   "ms": 27.4,
+   "size": 17024,
+   "sha256": "64f0733bd583fac372e376e85f41d6d29d44464d07043dd83b9cad3d6ce4ad0c",
+   "sameBytesAsNode": true
+  },
+  "genpyo": {
+   "ok": true,
+   "verifyOk": true,
+   "problems": [],
+   "ms": 6.2,
+   "size": 13778,
+   "sha256": "4679d46e2eb83e9926cebfcd5fb1ce053e1d1f6bb14cd43266cc48185b0a981e",
+   "sameBytesAsNode": true
+  }
+ }
+}

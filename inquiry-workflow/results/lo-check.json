@@ -1,0 +1,107 @@
+{
+ "generatedBy": "tools/lo_check.py",
+ "libreoffice": "LibreOffice 24.2.7.2 420(Build:2)",
+ "expected": {
+  "基本情報!D11": "記入済",
+  "基本情報!D12": 3,
+  "取組状況!C19": 3,
+  "施設別実績!C13": 255811,
+  "施設別実績!D13": 2302,
+  "施設別実績!E13": 63317,
+  "施設別実績!F13": 139750.5
+ },
+ "files": {
+  "genpyo.B-writeback": {
+   "stored_in_file": {
+    "基本情報!D11": null,
+    "基本情報!D12": null,
+    "取組状況!C19": null,
+    "施設別実績!C13": null,
+    "施設別実績!D13": null,
+    "施設別実績!E13": null,
+    "施設別実績!F13": null
+   },
+   "stored_matches": false,
+   "opened_by_libreoffice": true,
+   "after_libreoffice": {
+    "基本情報!D11": "記入済",
+    "基本情報!D12": 3,
+    "取組状況!C19": 3,
+    "施設別実績!C13": 255811,
+    "施設別実績!D13": 2302,
+    "施設別実績!E13": 63317,
+    "施設別実績!F13": 139750.5
+   },
+   "after_matches": true
+  },
+  "genpyo.B-writeback-keepresults": {
+   "stored_in_file": {
+    "基本情報!D11": null,
+    "基本情報!D12": null,
+    "取組状況!C19": null,
+    "施設別実績!C13": null,
+    "施設別実績!D13": null,
+    "施設別実績!E13": null,
+    "施設別実績!F13": null
+   },
+   "stored_matches": false,
+   "opened_by_libreoffice": true,
+   "after_libreoffice": {
+    "基本情報!D11": "記入済",
+    "基本情報!D12": 3,
+    "取組状況!C19": 3,
+    "施設別実績!C13": 255811,
+    "施設別実績!D13": 2302,
+    "施設別実績!E13": 63317,
+    "施設別実績!F13": 139750.5
+   },
+   "after_matches": true
+  },
+  "genpyo-lo.B-writeback": {
+   "stored_in_file": {
+    "基本情報!D11": null,
+    "基本情報!D12": null,
+    "取組状況!C19": null,
+    "施設別実績!C13": null,
+    "施設別実績!D13": null,
+    "施設別実績!E13": null,
+    "施設別実績!F13": null
+   },
+   "stored_matches": false,
+   "opened_by_libreoffice": true,
+   "after_libreoffice": {
+    "基本情報!D11": "記入済",
+    "基本情報!D12": 3,
+    "取組状況!C19": 3,
+    "施設別実績!C13": 255811,
+    "施設別実績!D13": 2302,
+    "施設別実績!E13": 63317,
+    "施設別実績!F13": 139750.5
+   },
+   "after_matches": true
+  },
+  "genpyo-lo.B-writeback-keepresults": {
+   "stored_in_file": {
+    "基本情報!D11": "未記入あり",
+    "基本情報!D12": 0,
+    "取組状況!C19": 0,
+    "施設別実績!C13": 0,
+    "施設別実績!D13": 0,
+    "施設別実績!E13": 0,
+    "施設別実績!F13": 0
+   },
+   "stored_matches": false,
+   "opened_by_libreoffice": true,
+   "after_libreoffice": {
+    "基本情報!D11": "未記入あり",
+    "基本情報!D12": 0,
+    "取組状況!C19": 0,
+    "施設別実績!C13": 0,
+    "施設別実績!D13": 0,
+    "施設別実績!E13": 0,
+    "施設別実績!F13": 0
+   },
+   "after_matches": false
+  }
+ }
+}
