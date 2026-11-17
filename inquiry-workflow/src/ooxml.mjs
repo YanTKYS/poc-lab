@@ -135,6 +135,9 @@ export function readCellXfs(stylesXml) {
       formatCode,
       isDate: formatCode != null ? isDateFormatCode(formatCode) : BUILTIN_DATE_FORMATS.has(numFmtId),
       isText: numFmtId === 49 || formatCode === '@',
+      isPercent: formatCode != null ? /%/.test(formatCode.replace(/"[^"]*"/g, '')) : numFmtId === 9 || numFmtId === 10,
+      isNumber: formatCode != null ? /[0#]/.test(formatCode.replace(/"[^"]*"/g, '')) : (numFmtId >= 1 && numFmtId <= 11) || (numFmtId >= 37 && numFmtId <= 44) || numFmtId === 48,
+      fillId: Number(attr(m[0], 'fillId') ?? 0),
       locked,
     });
   }

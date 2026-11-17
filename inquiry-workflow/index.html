@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>庁内照会・回答集約 PoC</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-ready="false">
+  <header class="top">
+    <div class="top-in">
+      <a class="home" href="../">PoC Lab</a>
+      <span class="app-name">庁内照会・回答集約 PoC</span>
+      <div class="roles" role="group" aria-label="画面の切り替え">
+        <button type="button" data-role="coordinator" aria-pressed="true">とりまとめ部署</button>
+        <button type="button" data-role="answer" aria-pressed="false">回答部署</button>
+      </div>
+    </div>
+    <p class="banner" role="note"><strong>公開PoC・架空データ専用。</strong>実在の調査票・職員情報・個人情報は入力しないでください。入力内容はこのブラウザの中だけに保存され、外部へ送信されません。</p>
+  </header>
+  <div id="save-alert" class="wrap" role="alert" hidden><div class="alert error"><strong>入力をブラウザに保存できていません。</strong>このタブを閉じたり再読み込みしたりすると、入力が失われます。ブラウザの保存容量の不足（大きな原票を登録した場合など）や、保存を禁止する設定が考えられます。</div></div>
+  <main id="app" class="wrap"><noscript>JavaScript を有効にしてください。</noscript></main>
+  <footer class="foot wrap">
+    <button type="button" class="link" data-act="download-log">評価用：操作の記録をCSVで保存<span id="log-count"></span></button>
+    <button type="button" class="link" data-act="reset">最初からやり直す</button>
+    <span class="muted">1台の端末で、とりまとめ部署・回答部署を切り替えて試すPoCです（認証・同時利用・通知の送信はありません）。</span>
+  </footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="dlg" aria-modal="true"></dialog>
+  <script type="module" src="app/main.js"></script>
+</body>
+</html>
