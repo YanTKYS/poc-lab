@@ -150,9 +150,14 @@ test('連絡文は共通リンクを含み、催促文は未提出の課だけ�
   applySampleSubmissions(state, answers, ['shimin', 'shisetsu']);
   const url = 'https://example.invalid/poc-lab/inquiry-workflow/#answer';
   assert.match(M.requestText(state, url), /庁内締切：2026年11月27日[\s\S]*#answer[\s\S]*・市民課：10項目/);
+  // 依頼・催促・差戻しのどの文面も、冒頭がデモ専用・送付禁止の見出しで、別端末では共有されないと読み取れる
   const rem = M.reminderText(state, url);
   assert.deepEqual(rem.depts.map((d) => d.id), ['zeimu', 'fukushi', 'kosodate']);
   M.returnItem(state, '取組状況!C6', 'shimin', '確認してください');
+  for (const text of [M.requestText(state, url), rem.text, M.returnText(state, 'shimin', url)]) {
+    assert.equal(text.split('\n')[0], '【デモ専用・実際の依頼として送付禁止】');
+    assert.match(text, /別の端末でリンクを開いても回答内容は共有されません/);
+  }
   assert.match(M.returnText(state, 'shimin', url), /問2 コンビニ交付の導入状況 ／ 回答：確認してください/);
   assert.deepEqual(M.reminderText(state, url).depts.map((d) => d.id), ['zeimu', 'fukushi', 'kosodate'], '差戻し中の課は催促しない');
 });

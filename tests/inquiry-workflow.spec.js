@@ -1,4 +1,4 @@
-// 庁内照会PoC：割当て→回答→提出→差戻し→修正→集約→提出用Excel出力を、画面の操作で一通り通す。
+// 庁内照会PoC：割当て→回答→提出→差戻し→修正→集約→確認用Excel（ドラフト）出力を、画面の操作で一通り通す。
 import { test as base, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { patch } from '../inquiry-workflow/src/xlsx-patch.mjs';
@@ -48,7 +48,7 @@ async function submitDept(page, label = '提出する') {
   await expect(page.locator('.ans-head .badge')).toHaveText('提出済み');
 }
 
-test('一連の操作：割当て→回答→提出→差戻し→再提出→集約→提出用Excel', async ({ page }) => {
+test('一連の操作：割当て→回答→提出→差戻し→再提出→集約→確認用Excel', async ({ page }) => {
   await open(page);
   await expect(page.locator('.banner')).toContainText('架空データ専用');
 
@@ -87,6 +87,9 @@ test('一連の操作：割当て→回答→提出→差戻し→再提出→�
   await page.locator('#deadline').dispatchEvent('change');
   await page.getByRole('button', { name: '回答の受付を始める' }).click();
   const req = await page.locator('#request-text').inputValue();
+  expect(req.split('\n')[0]).toBe('【デモ専用・実際の依頼として送付禁止】');
+  expect(req).toContain('別の端末でリンクを開いても回答内容は共有されません');
+  await expect(page.getByText('この文面は実際の依頼には使えません。')).toBeVisible();
   expect(req).toContain('庁内締切：2026年11月27日');
   expect(req).toContain('/poc-lab/inquiry-workflow/#answer');
   expect(req).toContain('・施設管理課：21項目');
@@ -164,15 +167,20 @@ test('一連の操作：割当て→回答→提出→差戻し→再提出→�
   await expect(page.getByTestId('review')).toHaveCount(1);
   await expect(page.getByTestId('review')).not.toContainText('確定値が未設定');
 
-  // ---- 7. 提出用Excel：出力前確認 → 出力 → 自動照合 ----
-  await tab(page, '④ 提出用Excel');
+  // ---- 7. 確認用Excel（ドラフト）：出力前確認 → 出力 → 自動照合 ----
+  await tab(page, '④ 確認用Excel');
+  await expect(page.getByTestId('demo-notice')).toContainText('デモの確認用ファイルです。正式提出には使用しないでください。');
+  await expect(page.getByTestId('demo-notice')).toContainText('提出先での受理は未確認');
   await expect(page.getByTestId('plan-pending')).toHaveText('0');
   const writes = await page.evaluate(() => window.__poc.M.outputPlan(window.__poc.S.state).writes);
   await expect(page.getByTestId('plan-writes')).toHaveText(String(writes.length));
-  await page.getByRole('button', { name: '提出用Excelを出力する' }).click();
+  await expect(page.getByTestId('plan-summary')).toContainText(`書き込む ${writes.length}件／書き込まない 0件`);
+  await page.getByRole('button', { name: '確認用Excelを出力する' }).click();
   await expect(page.getByTestId('export-result')).toContainText('問題なし');
+  await expect(page.getByTestId('result-notice')).toContainText('デモの確認用ファイルです。正式提出には使用しないでください。');
+  await expect(page.getByTestId('result-notice')).toContainText('Microsoft Excel実機での開封・再計算・保存、および提出先での受理は未確認');
   const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()]);
-  expect(dl.suggestedFilename()).toBe('genpyo_submit.xlsx');
+  expect(dl.suggestedFilename()).toBe('genpyo_preview.xlsx');
   const out = new Uint8Array(await readFile(await dl.path()));
 
   // ブラウザが出した .xlsx を、Node 側でも照合する（原票は fixtures のもの）
@@ -252,4 +260,34 @@ test('ブラウザに保存できないときは「保存済み」と見せず�
   await field(page, '取組状況!C10').fill('2025-04-01');
   await expect(page.locator('#saved-at')).toContainText('自動保存済み');
   await expect(page.locator('#save-alert')).toBeHidden();
+});
+
+test('未提出・未回答が残っていても確認用Excelを出力でき、件数と注意が表示される', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click();
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await tab(page, '② 依頼');
+  await page.getByRole('button', { name: '回答の受付を始める' }).click();
+  // 自課（デジタル推進課）の6項目だけ回答・提出し、ほかの課は未提出のままにする
+  await page.evaluate(() => {
+    const { S, M } = window.__poc;
+    for (const it of M.itemsOf(S.state, 'dx')) M.setAnswer(S.state, it.key, 'dx', it.type === 'date' ? '2026-11-27' : '架空');
+    M.submit(S.state, 'dx');
+  });
+  await tab(page, '④ 確認用Excel');
+  await expect(page.getByTestId('plan-writes')).toHaveText('6');
+  // 全62項目＝書き込む6＋書き込まない45＋任意で空欄11
+  await expect(page.getByTestId('plan-pending')).toHaveText('45');
+  await expect(page.getByTestId('plan-summary')).toContainText('書き込む 6件／書き込まない 45件（未提出・未回答・未確定など）／注意 0件');
+  await expect(page.getByTestId('plan-summary')).toContainText('任意項目で空欄の 11件は、別に数えています');
+  await expect(page.getByTestId('plan-summary')).toContainText('「書き込まない項目」と「注意」を確認してください');
+  await page.getByRole('button', { name: '確認用Excelを出力する' }).click(); // 未提出があっても出力できる
+  await expect(page.getByTestId('export-result')).toContainText('問題なし');
+  await expect(page.getByTestId('result-notice')).toContainText('正式提出には使用しないでください');
+});
+
+test('フッターに、操作の記録は評価用であり回答データの復元・引継ぎには使えない旨を表示する', async ({ page }) => {
+  await open(page);
+  await expect(page.locator('#log-note')).toContainText('評価用の操作ログです。回答データの書き出し・復元・部署間の引継ぎには使えません');
 });

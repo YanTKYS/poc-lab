@@ -4,7 +4,7 @@ import * as M from './model.js';
 import { S, layout, answerUrl } from './store.js';
 import { esc, fmtTime, statusBadge, ownerChip, gridHtml, legendHtml, answerText } from './ui.js';
 
-const TABS = [['assign', '① 割当て'], ['request', '② 依頼'], ['progress', '③ 進捗・集約'], ['output', '④ 提出用Excel']];
+const TABS = [['assign', '① 割当て'], ['request', '② 依頼'], ['progress', '③ 進捗・集約'], ['output', '④ 確認用Excel（ドラフト）']];
 
 export function coordinatorHtml() {
   const st = S.state;
@@ -80,7 +80,7 @@ function assignHtml() {
         <div><b>${items.length}</b><span>入力セル</span></div>
         <div><b>${items.length - unassigned.length}</b><span>割当て済み</span></div>
         <div><b>${unassigned.length}</b><span>未割当て（自課）</span></div>
-        <div><b data-testid="assign-ops">${st.counters.assignOps}</b><span>割当て操作</span></div>
+        <div title="一括割当ての処理を行った回数（例：9範囲を割り当てれば9回）。クリックやドラッグの回数ではありません"><b data-testid="assign-ops">${st.counters.assignOps}</b><span>割当て処理（回）</span></div>
       </div>
       <div id="sel-panel">${selPanelHtml()}</div>
       <details class="demo"><summary>デモ用ショートカット</summary>
@@ -154,12 +154,13 @@ function requestHtml() {
   <p class="hint">入力セルは ${items.length} 個です。複数課項目は関係する課それぞれに数えています。${un ? `<br><strong>未割当ての ${un} 項目は、自課（${esc(M.deptName(M.COORDINATOR))}）が回答します。</strong>` : ''}</p>
   <label class="fld inline">庁内締切 <input type="date" id="deadline" value="${esc(st.inquiry.deadline)}"></label>
   ${st.inquiry.opened ? `
-    <div class="alert ok" role="status">回答の受付を始めました。下の依頼文をコピーして、<strong>既存のメール／グループウェアで対象課に送ってください</strong>（このツールは送信しません）。</div>
-    <h3>依頼文（共通リンク入り）</h3>
+    <div class="alert ok" role="status">回答の受付を始めました。下の依頼文は、<strong>コピーの使い勝手を試すためのデモ専用</strong>です。</div>
+    <div class="alert warn" role="note"><strong>この文面は実際の依頼には使えません。</strong>このPoCは1台の端末・同じブラウザの中だけで動き、別の端末でリンクを開いても回答内容は共有されません。実際のメール送信・自動通知・共有の機能もありません（実運用では、同様の文面を既存のメール／グループウェアで人が送る想定です）。</div>
+    <h3>依頼文（デモ専用・共通リンク入り）</h3>
     <textarea class="copytext" id="request-text" readonly rows="14">${esc(M.requestText(st, answerUrl()))}</textarea>
     <div class="btn-row"><button type="button" class="primary" data-act="copy" data-copy="request">依頼文をコピー</button>
       <button type="button" data-act="tab" data-tab="progress">進捗・集約へ →</button></div>
-    <p class="hint">リンクは照会ごとに共通の1本です。開いた人が所属課を選ぶと、その課の項目だけが表示されます（このPoCは1台の端末・1つのブラウザの中だけで動きます）。</p>`
+    <p class="hint">リンクは照会ごとに共通の1本です。開いた人が所属課を選ぶと、その課の項目だけが表示されます。このPoCでは、同じ端末・同じブラウザで開いたときだけ回答内容が見えます。</p>`
     : '<div class="btn-row"><button type="button" class="primary" data-act="open">回答の受付を始める</button></div><p class="hint">受付を始めると、回答部署の画面で入力できるようになり、依頼文が表示されます。</p>'}`;
 }
 
@@ -181,7 +182,7 @@ function progressHtml() {
   return `<section><h2>進捗</h2>
     <table class="tbl" data-testid="progress"><thead><tr><th>課</th><th>状態</th><th>入力済み（必須）</th><th>提出</th><th></th></tr></thead><tbody>${rows}</tbody></table>
     <div class="btn-row">${late.length ? `<button type="button" data-act="copy" data-copy="reminder">催促文をコピー（未提出 ${late.length}課：${esc(late.map((d) => d.name).join('・'))}）</button>` : '<span class="hint">依頼した課はすべて提出済みです。</span>'}</div>
-    <p class="hint">催促・差戻しの連絡は、コピーした文面を既存のメール等で送ります。提出されると、この表に自動で反映されます。</p>
+    <p class="hint">催促文・差戻しの連絡文のコピーも<strong>デモ専用</strong>です（冒頭に「${esc(M.DEMO_HEADING)}」が付き、実際の連絡には使えません。別の端末とは共有されません）。提出されると、この表に自動で反映されます。</p>
     <details class="demo"><summary>デモ用ショートカット</summary>
       <p class="hint">架空の原票専用。まだ提出していない課に回答例を入力し、提出済みにします。</p>
       <button type="button" data-act="sample-answers">回答例を入力して全課を提出済みにする</button></details>
@@ -258,20 +259,21 @@ function reviewHtml() {
     : `<p class="empty">${f === 'caution' ? '注意のある項目はありません。' : '該当する項目はありません。'}</p>`}`;
 }
 
-// ---- ④ 提出用Excel --------------------------------------------------------
+// ---- ④ 確認用Excel（ドラフト） -----------------------------------------------
 function outputHtml() {
   const st = S.state;
   const plan = M.outputPlan(st);
   const total = M.itemList(st).length;
   const o = S.ui.output;
-  return `<h2>出力前の確認</h2>
-  <div class="alert warn"><strong>この出力方式は条件付き採用です。</strong> Microsoft Excel での開封・再計算・保存は未確認です（<a href="https://github.com/YanTKYS/poc-lab/blob/main/inquiry-workflow/EXCEL.md" rel="noopener">検証記録</a>）。提出前に必ずExcelで開いて確認してください。</div>
+  return `<h2>確認用Excel（ドラフト）：出力前の確認</h2>
+  <div class="alert warn" data-testid="demo-notice"><strong>デモの確認用ファイルです。正式提出には使用しないでください。</strong> Microsoft Excel実機での開封・再計算・保存、および提出先での受理は未確認です（出力方式は条件付き採用：<a href="https://github.com/YanTKYS/poc-lab/blob/main/inquiry-workflow/EXCEL.md" rel="noopener">検証記録</a>）。</div>
   <div class="stat-row wide">
     <div><b data-testid="plan-writes">${plan.writes.length}</b><span>書き込むセル（全 ${total}）</span></div>
-    <div><b data-testid="plan-pending">${plan.pending.length}</b><span>書き込まない（未回答・未確定）</span></div>
-    <div><b>${plan.cautions.length}</b><span>注意</span></div>
+    <div><b data-testid="plan-pending">${plan.pending.length}</b><span>書き込まない（未提出・未回答・未確定など）</span></div>
+    <div><b data-testid="plan-cautions">${plan.cautions.length}</b><span>注意</span></div>
     <div><b>${plan.skippedOptional}</b><span>任意で空欄</span></div>
   </div>
+  <p data-testid="plan-summary"><strong>書き込む ${plan.writes.length}件／書き込まない ${plan.pending.length}件（未提出・未回答・未確定など）／注意 ${plan.cautions.length}件。</strong>${plan.skippedOptional ? `任意項目で空欄の ${plan.skippedOptional}件は、別に数えています（空欄のまま）。` : ''}出力する前に、下の「書き込まない項目」と「注意」を確認してください。</p>
   ${plan.pending.length ? `<h3>書き込まない項目（原票のセルはそのまま残ります）</h3><table class="tbl"><thead><tr><th>位置</th><th>見出し</th><th>理由</th></tr></thead><tbody>
     ${plan.pending.map((p) => `<tr><td>${esc(p.item.sheet)} ${esc(p.item.cell)}</td><td>${esc(p.item.label)}</td><td>${esc(p.why)}</td></tr>`).join('')}</tbody></table>` : ''}
   ${plan.cautions.length ? `<h3>注意</h3><ul>${plan.cautions.map((c) => `<li>${esc(c.item.sheet)} ${esc(c.item.cell)}　${esc(c.item.label)}：${esc(c.why)}</li>`).join('')}</ul>` : ''}
@@ -279,8 +281,8 @@ function outputHtml() {
   <details${plan.writes.length && plan.writes.length <= 12 ? ' open' : ''}><summary>書き込む内容の一覧（${plan.rows.length}セル）</summary>
     <table class="tbl" data-testid="plan-rows"><thead><tr><th>シート</th><th>セル</th><th>見出し</th><th>書き込む値</th><th>回答元</th></tr></thead><tbody>
     ${plan.rows.map((r) => `<tr><td>${esc(r.item.sheet)}</td><td>${esc(r.item.cell)}</td><td>${esc(r.item.label)}</td><td class="ans">${esc(r.shown)}</td><td>${esc(r.source)}</td></tr>`).join('')}</tbody></table></details>
-  <div class="btn-row"><button type="button" class="primary" data-act="export"${plan.writes.length ? '' : ' disabled'}>提出用Excelを出力する</button>
-    ${plan.pending.length ? '<span class="hint">未回答が残っていても出力できます（途中経過を国の様式で確かめるため）。</span>' : ''}</div>
+  <div class="btn-row"><button type="button" class="primary" data-act="export"${plan.writes.length ? '' : ' disabled'}>確認用Excelを出力する</button>
+    ${plan.pending.length ? '<span class="hint">未提出・未回答が残っていても出力できます（途中経過を原票の様式で確かめるため）。</span>' : ''}</div>
   ${o ? outputResultHtml(o) : ''}`;
 }
 
@@ -295,7 +297,8 @@ function outputResultHtml(o) {
       <ul>${v.problems.slice(0, 20).map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div>`;
   }
   const s = v.summary;
-  return `<section class="result" data-testid="export-result"><h2>出力しました（${fmtTime(o.at)}）</h2>
+  return `<section class="result" data-testid="export-result"><h2>確認用Excelを出力しました（${fmtTime(o.at)}）</h2>
+    <div class="alert warn" data-testid="result-notice"><strong>デモの確認用ファイルです。正式提出には使用しないでください。</strong>Microsoft Excel実機での開封・再計算・保存、および提出先での受理は未確認です。</div>
     <p><a class="download" id="download" href="${o.url}" download="${esc(o.name)}">${esc(o.name)} をダウンロード</a></p>
     <h3>出力直後の自動照合：<span class="okmark">問題なし</span></h3>
     <ul>
@@ -304,7 +307,7 @@ function outputResultHtml(o) {
       <li>行の属性・並び（${s.rowsChecked} 行）、結合・入力規則・保護などセル以外の部分は元と同一</li>
       <li>ファイル内の部品は増減なし（変更 ${s.parts.changed.length} ／ 同一 ${s.parts.same}）</li>
     </ul>
-    <h3>提出前に、Excelで開いて確認すること（自動照合では分かりません）</h3>
+    <h3>確認用ファイルとして、Excelで開いて確認すること（自動照合では分かりません）</h3>
     <ul class="todo">
       <li>エラーや「修復」の表示が出ずに開ける</li>
       <li>合計などの数式が計算されている（出力直後のファイルには計算結果が入っていません）</li>

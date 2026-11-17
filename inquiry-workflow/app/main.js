@@ -37,7 +37,7 @@ function showSaveState() {
 function commit(action) {
   if (action) log(action);
   // 状態が変わったら、前に出力したファイルは古くなるので表示から外す
-  if (!action?.startsWith('提出用Excelを出力') && S.ui.output) {
+  if (!action?.startsWith('確認用Excelを出力') && S.ui.output) {
     if (S.ui.output.url) URL.revokeObjectURL(S.ui.output.url);
     S.ui.output = null;
   }
@@ -205,7 +205,7 @@ const actions = {
     copyText(text);
     log({ request: '依頼文をコピー', reminder: '催促文をコピー', return: '差戻しの連絡文をコピー' }[el.dataset.copy]);
     persist();
-    toast('コピーしました。既存のメール等に貼り付けて送ってください');
+    toast('コピーしました（デモ専用の文面です。実際の依頼・連絡には使えません）');
   },
   'goto-own': () => { Object.assign(S.ui, { role: 'answer', dept: M.COORDINATOR }); render(); window.scrollTo(0, 0); },
   'sample-answers': async () => {
@@ -225,7 +225,7 @@ const actions = {
     M.returnItem(S.state, el.dataset.key, el.dataset.dept, reason);
     closeDialog();
     commit(`差戻し ${el.dataset.key}（${M.deptName(el.dataset.dept)}）`);
-    toast('差し戻しました。「差戻しの連絡文をコピー」で相手に知らせてください');
+    toast('差し戻しました。連絡文のコピーを試せます（デモ専用）');
   },
   edit: (el) => {
     const it = S.state.items[el.dataset.key];
@@ -453,12 +453,12 @@ function exportXlsx() {
     if (out.verify.ok) {
       // 日本語のファイル名は、検証に使った Chromium で「download」（拡張子なし）に置き換わったため英数字にする
       const base = S.state.inquiry.sourceName.replace(/\.xlsx$/i, '');
-      out.name = `${/^[\w.-]+$/.test(base) ? base : 'inquiry'}_submit.xlsx`;
+      out.name = `${/^[\w.-]+$/.test(base) ? base : 'inquiry'}_preview.xlsx`;
       out.url = URL.createObjectURL(new Blob([r.bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
     }
   }
   S.ui.output = out;
-  commit(`提出用Excelを出力（${plan.writes.length}セル、照合 ${out.verify?.ok ? 'OK' : 'NG'}）`);
+  commit(`確認用Excelを出力（${plan.writes.length}セル、照合 ${out.verify?.ok ? 'OK' : 'NG'}）`);
 }
 
 // ---- 起動 -----------------------------------------------------------------
