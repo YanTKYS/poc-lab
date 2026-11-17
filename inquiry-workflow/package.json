@@ -1,0 +1,12 @@
+{
+  "name": "inquiry-workflow-poc",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "measure": "node tools/measure.mjs"
+  },
+  "dependencies": { "fflate": "0.8.3" },
+  "devDependencies": { "exceljs": "4.4.0" }
+}

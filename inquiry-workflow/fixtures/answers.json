@@ -1,0 +1,377 @@
+[
+ {
+  "sheet": "基本情報",
+  "cell": "D4",
+  "type": "text",
+  "value": "012345",
+  "note": "先頭ゼロを含む識別文字列"
+ },
+ {
+  "sheet": "基本情報",
+  "cell": "D5",
+  "type": "text",
+  "value": "架空市"
+ },
+ {
+  "sheet": "基本情報",
+  "cell": "D6",
+  "type": "text",
+  "value": "デジタル推進課"
+ },
+ {
+  "sheet": "基本情報",
+  "cell": "D7",
+  "type": "text",
+  "value": "検証 太郎"
+ },
+ {
+  "sheet": "基本情報",
+  "cell": "D8",
+  "type": "text",
+  "value": "0123-45-6789",
+  "note": "先頭ゼロを含む文字列"
+ },
+ {
+  "sheet": "基本情報",
+  "cell": "D9",
+  "type": "date",
+  "value": "2026-11-27",
+  "note": "日付（和文の表示形式）"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C5",
+  "type": "number",
+  "value": 12
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D5",
+  "type": "text",
+  "value": "4月1日時点"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C6",
+  "type": "text",
+  "value": "導入済み"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D6",
+  "type": "text",
+  "value": "令和6年度に開始"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C7",
+  "type": "text",
+  "value": "導入予定"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D7",
+  "type": "blank"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C8",
+  "type": "text",
+  "value": "未導入"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D8",
+  "type": "text",
+  "value": "該当なし",
+  "note": "該当なし→文言で書く例"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C9",
+  "type": "text",
+  "value": "導入済み"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D9",
+  "type": "text",
+  "value": "税目: 住民税 & 固定資産税 <軽自動車税を除く>"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C10",
+  "type": "date",
+  "value": "2025-04-01"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D10",
+  "type": "blank"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C11",
+  "type": "text",
+  "value": "実施済み"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D11",
+  "type": "text",
+  "value": "  前後に空白を含む文字列  "
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C12",
+  "type": "number",
+  "value": 0.125
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D12",
+  "type": "text",
+  "value": "12.5%（概算）"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C13",
+  "type": "text",
+  "value": "導入済み"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D13",
+  "type": "blank"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C14",
+  "type": "text",
+  "value": "導入予定"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D14",
+  "type": "text",
+  "value": "'先頭がアポストロフィの文字列"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C15",
+  "type": "number",
+  "value": 0
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "D15",
+  "type": "text",
+  "value": "0件（実績なし）"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C16",
+  "type": "number",
+  "value": 5,
+  "note": "複数課の合算（3＋2）"
+ },
+ {
+  "sheet": "取組状況",
+  "cell": "C17",
+  "type": "text",
+  "value": "【市民課】窓口の混雑。\n【税務課】証明書のコンビニ交付率が低い。\n【福祉課】端末が不足。",
+  "note": "改行を含む文章"
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C5",
+  "type": "number",
+  "value": 12345
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D5",
+  "type": "number",
+  "value": 300
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E5",
+  "type": "number",
+  "value": 2400
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F5",
+  "type": "number",
+  "value": 15800
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C6",
+  "type": "number",
+  "value": 5120
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D6",
+  "type": "number",
+  "value": 298
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E6",
+  "type": "number",
+  "value": 610
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F6",
+  "type": "number",
+  "value": 7200
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C7",
+  "type": "number",
+  "value": 4870
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D7",
+  "type": "number",
+  "value": 301
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E7",
+  "type": "number",
+  "value": 0
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F7",
+  "type": "number",
+  "value": 6900
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C8",
+  "type": "number",
+  "value": 48211
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D8",
+  "type": "number",
+  "value": 340
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E8",
+  "type": "number",
+  "value": 21050
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F8",
+  "type": "number",
+  "value": 32500
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C9",
+  "type": "number",
+  "value": 152340
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D9",
+  "type": "number",
+  "value": 285
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E9",
+  "type": "number",
+  "value": 30455
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F9",
+  "type": "number",
+  "value": 41000
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C10",
+  "type": "number",
+  "value": 9800
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D10",
+  "type": "number",
+  "value": 244
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E10",
+  "type": "number",
+  "value": 0
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F10",
+  "type": "number",
+  "value": 12300.5
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C11",
+  "type": "number",
+  "value": 3110
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D11",
+  "type": "number",
+  "value": 244
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E11",
+  "type": "blank",
+  "note": "該当なし→空欄で書く例"
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F11",
+  "type": "number",
+  "value": 9800
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "C12",
+  "type": "number",
+  "value": 20015
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "D12",
+  "type": "number",
+  "value": 290
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "E12",
+  "type": "number",
+  "value": 8802
+ },
+ {
+  "sheet": "施設別実績",
+  "cell": "F12",
+  "type": "number",
+  "value": 14250
+ }
+]
