@@ -1,6 +1,8 @@
 // 庁内照会PoC：割当て→回答→提出→差戻し→修正→集約→確認用Excel（ドラフト）出力を、画面の操作で一通り通す。
 import { test as base, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { strToU8, strFromU8 } from 'fflate';
+import { readWorkbook } from '../inquiry-workflow/src/ooxml.mjs';
 import { patch } from '../inquiry-workflow/src/xlsx-patch.mjs';
 import { verifyWriteBack, readAllCells } from '../inquiry-workflow/src/xlsx-verify.mjs';
 import { fflateZip as zip } from '../inquiry-workflow/src/zip-fflate.mjs';
@@ -368,4 +370,107 @@ test('デモ割当てのログは「56セル・9範囲」と記録し、「56操
   const actions = await page.evaluate(() => window.__poc.S.state.log.map((l) => l.action));
   expect(actions.at(-1)).toBe('例の割当てを適用（56セル・9範囲）');
   expect(actions.join('\n')).not.toContain('56操作');
+});
+
+// ---- 非表示シート（Issue #22）：回答・割当ての対象にせず、確認用Excelには元のまま残す ----
+/** 架空の原票の workbook.xml の <sheet state> だけを書き換えた .xlsx を作る（検証用の一時的なXML変更）。 */
+async function workbookWithStates(states) {
+  const files = zip.unzip(new Uint8Array(await readFile(new URL('../inquiry-workflow/fixtures/genpyo.xlsx', import.meta.url))));
+  let wb = strFromU8(files['xl/workbook.xml']);
+  for (const [name, state] of Object.entries(states)) {
+    const tag = new RegExp(`<sheet\\b[^>]*\\bname="${name}"[^>]*>`).exec(wb)[0];
+    wb = wb.replace(tag, tag.replace(/\sstate="[^"]*"/, '').replace(/(\sr:id=)/, ` state="${state}"$1`));
+  }
+  files['xl/workbook.xml'] = strToU8(wb);
+  return zip.zip(files);
+}
+const sheetStates = (bytes) => Object.fromEntries(readWorkbook(zip.unzip(bytes)).sheets.map((x) => [x.name, x.state]));
+
+test('非表示シート（hidden・veryHidden）は割当て・回答の対象にならず、出力した確認用Excelに元の状態・内容のまま残る', async ({ page }) => {
+  const hiddenBook = await workbookWithStates({ 施設別実績: 'hidden', 記入要領: 'veryHidden' });
+  await open(page);
+  await page.setInputFiles('#file', { name: 'hidden-demo.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from(hiddenBook) });
+
+  // 割当て画面：表示シートだけがタブに出る。対象外のシートが案内される。入力セル候補は 62−32＝30
+  await expect(page.locator('.sheet-tabs [role=tab]')).toHaveCount(2);
+  await expect(page.locator('.sheet-tabs')).not.toContainText('施設別実績');
+  await expect(page.locator('.sheet-tabs')).not.toContainText('記入要領');
+  await expect(page.getByTestId('hidden-note')).toContainText('非表示のシートは、回答・割当ての対象にしていません');
+  await expect(page.getByTestId('hidden-note')).toContainText('「施設別実績」（非表示）');
+  await expect(page.getByTestId('hidden-note')).toContainText('「記入要領」（非表示 veryHidden）');
+  await expect(page.locator('.stat-row b').first()).toHaveText('30');
+  // 表示シートの入力候補は従来どおり（問7の選択肢は、veryHidden にした記入要領のセルを参照している）
+  await page.getByRole('tab', { name: /取組状況/ }).click();
+  await expect(page.locator('#assign-grid td[data-ref=C11] .chip')).toBeVisible();
+
+  // 回答画面：非表示シートの項目は出ない。veryHidden のシートにある選択肢は使える
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await tab(page, '② 依頼');
+  await page.getByRole('button', { name: '回答の受付を始める' }).click();
+  await pickDept(page, '福祉課');
+  await expect(page.locator('.sheet-sec h2')).toHaveText(['取組状況']);
+  await expect(page.locator('table.tbl-in')).toHaveCount(0);
+  await expect(field(page, '取組状況!C11').locator('option')).toHaveText(['選んでください', '実施済み', '実施予定', '未実施']);
+
+  // 残りをデモ用ショートカットで提出済みにし、複数課項目を確定して出力
+  await role(page, 'とりまとめ部署');
+  await tab(page, '③ 進捗・集約');
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '回答例を入力して全課を提出済みにする' }).click();
+  await expect(page.getByTestId('progress').locator('.badge', { hasText: '提出済み' })).toHaveCount(6); // 回答例の読み込みを待つ
+  await page.evaluate(() => {
+    const { S, M } = window.__poc;
+    for (const key of ['取組状況!C16', '取組状況!C17']) {
+      const sug = M.mergeSuggestion(S.state, S.state.items[key]);
+      M.setFinal(S.state, key, sug.raw, sug.by);
+    }
+  });
+  await tab(page, '④ 確認用Excel');
+  await expect(page.getByTestId('hidden-note')).toContainText('これらのシートも内容・数式・書式・表示状態を変えずに残ります');
+  await expect(page.getByTestId('plan-pending')).toHaveText('0');
+  const writes = await page.evaluate(() => window.__poc.M.outputPlan(window.__poc.S.state).writes);
+  expect(writes.length).toBe(30 - 3); // 任意で空欄の補足3つ（D5〜D15 のうち回答のない欄）は書かない
+  expect(writes.every((w) => w.sheet !== '施設別実績')).toBe(true);
+  await page.getByRole('button', { name: '確認用Excelを出力する' }).click();
+  await expect(page.getByTestId('export-result')).toContainText('問題なし');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()]);
+  const out = new Uint8Array(await readFile(await dl.path()));
+
+  // 出力：表示状態は元のまま、非表示シートの部品は1バイトも変わらない。ブラウザの出力を Node 側でも照合する
+  expect(sheetStates(out)).toEqual({ 記入要領: 'veryHidden', 基本情報: 'visible', 取組状況: 'visible', 施設別実績: 'hidden' });
+  const before = zip.unzip(hiddenBook);
+  const after = zip.unzip(out);
+  const pathOf = (name) => readWorkbook(before).sheets.find((x) => x.name === name).path;
+  for (const name of ['施設別実績', '記入要領']) expect(after[pathOf(name)], `${name} が変わった`).toEqual(before[pathOf(name)]);
+  expect(verifyWriteBack(hiddenBook, out, writes, zip).problems).toEqual([]);
+  expect(readAllCells(after)['取組状況'].get('C5').value).toBe(12);
+});
+
+test('すべてのシートが非表示の原票は登録しない', async ({ page }) => {
+  const book = await workbookWithStates({ 記入要領: 'hidden', 基本情報: 'hidden', 取組状況: 'veryHidden', 施設別実績: 'hidden' });
+  await open(page);
+  await page.setInputFiles('#file', { name: 'all-hidden.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from(book) });
+  await expect(page.locator('#app .alert.error')).toContainText('表示されているシートがありません');
+  await expect(page.locator('.tabs')).toHaveCount(0);
+});
+
+test('非表示シートの対応前に登録した状態を読み込むと、非表示シートの項目を対象から外す', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click(); // 全シート表示で62項目（以前の版と同じ状態）
+  await expect(page.locator('.stat-row b').first()).toHaveText('62');
+  const hiddenB64 = Buffer.from(await workbookWithStates({ 施設別実績: 'hidden' })).toString('base64');
+  // 保存済みの状態の原票だけを「施設別実績が非表示」のものに入れ替える（項目は以前のまま）
+  await page.evaluate((b64) => {
+    const key = 'inquiry-workflow-poc/v1';
+    const st = JSON.parse(localStorage.getItem(key));
+    st.inquiry.sourceB64 = b64;
+    localStorage.setItem(key, JSON.stringify(st));
+  }, hiddenB64);
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-ready', 'true');
+  await expect(page.locator('#toast')).toContainText('非表示シートにあった 32項目を、回答・割当ての対象から外しました');
+  await expect(page.locator('.stat-row b').first()).toHaveText('30');
+  await expect(page.locator('.sheet-tabs [role=tab]')).toHaveCount(3); // 記入要領・基本情報・取組状況
+  await expect(page.locator('.sheet-tabs')).not.toContainText('施設別実績');
 });

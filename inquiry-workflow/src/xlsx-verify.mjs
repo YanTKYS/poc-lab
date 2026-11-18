@@ -90,6 +90,14 @@ export function verifyWriteBack(origBytes, outBytes, writes, zip) {
     if (!sheetPaths.has(n) && n !== ssPath && n !== wb.workbookPath) problems.push(`対象外の部品が変わっています: ${n}`);
   }
 
+  // 非表示シート（hidden・veryHidden）の部品は、1バイトも変わっていないこと
+  // （表示状態の指定は workbook.xml の <sheet state> にあり、下の workbook.xml の照合で変わっていないことを確かめる）
+  for (const sh of wb.sheets) {
+    if (sh.hidden && sh.path && orig[sh.path] && out[sh.path] && !same(orig[sh.path], out[sh.path])) {
+      problems.push(`${sh.name}: 非表示シート（${sh.state}）が元のままではありません`);
+    }
+  }
+
   // workbook.xml は「開いたときに再計算」の指定以外は同じであること
   if (parts.changed.includes(wb.workbookPath)) {
     const strip = (x) => x.replace(/<calcPr fullCalcOnLoad="1"\/>/, '').replace(/\sfullCalcOnLoad\s*=\s*"[^"]*"/, '');
