@@ -474,3 +474,93 @@ test('非表示シートの対応前に登録した状態を読み込むと、�
   await expect(page.locator('.sheet-tabs [role=tab]')).toHaveCount(3); // 記入要領・基本情報・取組状況
   await expect(page.locator('.sheet-tabs')).not.toContainText('施設別実績');
 });
+
+// ---- 原票に元からある内容（Issue #23）：割当て・回答の画面で見え、回答がなければ出力でも原票のまま残る ----
+test('原票の既存文字（ひな形・記入例）：割当て前後も表示が失われず、回答部署で参照でき、未回答なら原票のまま、回答したときだけ書き換わる', async ({ page }) => {
+  const orig = new Uint8Array(await readFile(new URL('../inquiry-workflow/fixtures/genpyo.xlsx', import.meta.url)));
+  // 架空の原票の入力セルに、ひな形文字・記入例を入れる（C10＝日付欄、D7＝任意の補足欄、施設別実績C5＝数値の表の欄）
+  const book = patch(orig, [
+    { sheet: '取組状況', cell: 'C10', type: 'text', value: '　年　月' },
+    { sheet: '取組状況', cell: 'D7', type: 'text', value: '（補足を記入）' },
+    { sheet: '施設別実績', cell: 'C5', type: 'number', value: 99 },
+  ], zip).bytes;
+  const origText = (ref) => page.locator(`#assign-grid td[data-ref=${ref}] .orig`).textContent();
+
+  await open(page);
+  await page.setInputFiles('#file', { name: 'template.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from(book) });
+  await page.getByRole('tab', { name: /取組状況/ }).click();
+
+  // 1. 割当て前（未割当て）も後も、担当課の表示と原票の内容の両方が分かる
+  await expect(page.locator('#assign-grid td[data-ref=C10] .chip')).toHaveText('未割当');
+  expect(await origText('C10')).toBe('　年　月');
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await expect(page.locator('#assign-grid td[data-ref=C10] .chip')).toHaveText('税務'); // 割り当てた
+  expect(await origText('C10')).toBe('　年　月'); // 原票の内容は消えない
+  expect(await origText('D7')).toBe('（補足を記入）');
+  await page.fill('#range-input', 'C10');
+  await page.press('#range-input', 'Enter');
+  await expect(page.getByTestId('sel-orig')).toContainText('割り当てても変わりません');
+  expect(await page.getByTestId('sel-orig').locator('.orig').textContent()).toBe('　年　月');
+
+  // 2. 回答部署：原票の記入例／既存値を参照できるが、入力欄には入らず、入力済みにも数えない
+  await tab(page, '② 依頼');
+  await page.getByRole('button', { name: '回答の受付を始める' }).click();
+  await pickDept(page, '税務課');
+  const c10 = page.locator('.field[data-field="取組状況!C10"]');
+  await expect(c10.getByTestId('orig-ref')).toContainText('原票の記入例／既存値');
+  expect(await c10.locator('.orig-val').textContent()).toBe('　年　月');
+  await expect(field(page, '取組状況!C10')).toHaveValue('');
+  await expect(page.locator('#done-count')).toHaveText('0');
+  // 必須が未回答なので提出できない（原票の文字は回答にならない）
+  await page.locator('[data-act=precheck]').click();
+  await expect(page.locator('dialog')).toContainText('未入力');
+  await expect(page.getByRole('button', { name: '提出する', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '入力に戻る' }).click();
+  // 数値の表：原票の既存値は、欄の薄い文字（placeholder）で参照でき、値にはならない
+  await pickDept(page, '施設管理課');
+  const f5 = field(page, '施設別実績!C5');
+  await expect(f5).toHaveAttribute('placeholder', '99');
+  await expect(f5).toHaveValue('');
+  await expect(page.getByTestId('orig-hint')).toContainText('薄い文字');
+
+  // 3. 残りを回答例で提出（C10 には回答例の日付が入る。D7 には回答例がない）→ 確認用Excelを出力
+  await role(page, 'とりまとめ部署');
+  await tab(page, '③ 進捗・集約');
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '回答例を入力して全課を提出済みにする' }).click();
+  await expect(page.getByTestId('progress').locator('.badge', { hasText: '提出済み' })).toHaveCount(6);
+  await page.evaluate(() => {
+    const { S, M } = window.__poc;
+    for (const key of ['取組状況!C16', '取組状況!C17']) {
+      const sug = M.mergeSuggestion(S.state, S.state.items[key]);
+      M.setFinal(S.state, key, sug.raw, sug.by);
+    }
+  });
+  await tab(page, '④ 確認用Excel');
+  const writes = await page.evaluate(() => window.__poc.M.outputPlan(window.__poc.S.state).writes);
+  expect(writes.some((w) => w.sheet === '取組状況' && w.cell === 'D7')).toBe(false); // 未回答の任意項目は書かない
+  await page.getByRole('button', { name: '確認用Excelを出力する' }).click();
+  await expect(page.getByTestId('export-result')).toContainText('問題なし');
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.locator('#download').click()]);
+  const out = new Uint8Array(await readFile(await dl.path()));
+  expect(verifyWriteBack(book, out, writes, zip).problems).toEqual([]);
+  const cells = readAllCells(zip.unzip(out));
+  expect(cells['取組状況'].get('D7').value).toBe('（補足を記入）'); // 未回答 → 原票のまま
+  expect(typeof cells['取組状況'].get('C10').value).toBe('number'); // 回答（日付）で置き換わった。ひな形文字は残らない
+  expect(cells['施設別実績'].get('C5').value).toBe(12345); // 回答（99の記入例は置き換わった）
+});
+
+test('出力前確認：書き込まない項目に、原票のまま残る内容を表示する', async ({ page }) => {
+  const orig = new Uint8Array(await readFile(new URL('../inquiry-workflow/fixtures/genpyo.xlsx', import.meta.url)));
+  const book = patch(orig, [{ sheet: '取組状況', cell: 'C10', type: 'text', value: '　年　月' }], zip).bytes;
+  await open(page);
+  await page.setInputFiles('#file', { name: 'template.xlsx', mimeType: 'application/octet-stream', buffer: Buffer.from(book) });
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await tab(page, '④ 確認用Excel');
+  const row = page.locator('tr', { hasText: '問6 申告の電子化を開始した日' });
+  await expect(row).toContainText('税務課が未提出');
+  expect(await row.locator('.orig').textContent()).toBe('　年　月');
+  await expect(page.locator('th', { hasText: '原票の内容（そのまま残る）' })).toBeVisible();
+});

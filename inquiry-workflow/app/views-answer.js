@@ -1,7 +1,7 @@
 // 回答部署の画面：自課の項目だけを表示し、回答・途中保存（自動）・提出・差戻し対応を行う。
 import { colName } from '../lib/xlsx-layout.js';
 import * as M from './model.js';
-import { S } from './store.js';
+import { S, originalText } from './store.js';
 import { esc, fmtTime, fmtDeadline, statusBadge, answerText, savedText } from './ui.js';
 
 export function answerHtml() {
@@ -73,8 +73,12 @@ function fieldHtml(st, it, dept, { locked, label }) {
   } else {
     input = `<textarea rows="${raw.includes('\n') || raw.length > 40 ? 3 : 2}" ${common}>${esc(raw)}</textarea>`;
   }
+  // 原票に元からある内容（「　年　月」等）。入力欄には入れず、入力済みにも数えない。回答しなければ原票のまま残る
+  const orig = originalText(it);
+  const origRef = orig ? `<p class="orig-ref" data-testid="orig-ref"><span class="orig-label">原票の記入例／既存値</span><span class="orig-val">${esc(orig)}</span><small>入力欄には入っていません。回答しなければ、原票のままです</small></p>` : '';
   return `<div class="field" data-field="${esc(it.key)}">
     <label for="${id}">${esc(label)}${it.optional ? '<span class="opt">任意</span>' : ''}<span class="tlabel">${M.TYPE_LABEL[it.type]}</span></label>
+    ${origRef}
     ${input}
     <div class="field-foot">
       <label class="check small"><input type="checkbox" data-na="${esc(it.key)}"${na ? ' checked' : ''}${locked ? ' disabled' : ''}> 該当なし</label>
@@ -101,6 +105,7 @@ function questionHtml(st, q, dept, locked, returnedKeys) {
 }
 
 function tableHtml(st, g, dept, locked, returnedKeys) {
+  let hasOrig = false;
   const byPos = new Map(g.list.map((it) => [`${it.row}:${it.col}`, it]));
   const head = g.cols.map((c) => {
     const it = g.list.find((x) => x.col === c);
@@ -116,13 +121,16 @@ function tableHtml(st, g, dept, locked, returnedKeys) {
       const shown = a?.na ? '-' : a?.raw ?? '';
       const ret = returnedKeys.has(it.key);
       const lbl = `${it.rowLabel} ${it.colLabel}`;
+      const orig = originalText(it);
+      if (orig) hasOrig = true;
       return `<td class="${p.state === 'error' ? 'err' : ''}${ret ? ' returned' : ''}"><input type="text" inputmode="decimal" data-key="${esc(it.key)}" data-table="1" data-r="${g.rows.indexOf(r)}" data-c="${g.cols.indexOf(c)}"
-        aria-label="${esc(lbl)}" value="${esc(shown)}"${p.state === 'error' ? ' aria-invalid="true"' : ''}${locked || ret ? ' disabled' : ''} title="${esc(ret ? '差戻し中：上の欄で修正してください' : p.state === 'error' ? p.error : `${it.sheet} ${it.cell}`)}">${it.type === 'percent' ? '<span class="unit">％</span>' : ''}</td>`;
+        aria-label="${esc(lbl)}" value="${esc(shown)}"${orig ? ` placeholder="${esc(orig)}"` : ''}${p.state === 'error' ? ' aria-invalid="true"' : ''}${locked || ret ? ' disabled' : ''} title="${esc(ret ? '差戻し中：上の欄で修正してください' : p.state === 'error' ? p.error : `${it.sheet} ${it.cell}${orig ? `／原票の記入例・既存値：${orig}` : ''}`)}">${it.type === 'percent' ? '<span class="unit">％</span>' : ''}</td>`;
     }).join('');
     return `<tr><th scope="row">${esc(rowItem?.rowLabel || r)}</th>${cells}</tr>`;
   }).join('');
   return `<div class="tbl-in-wrap"><table class="tbl tbl-in" data-sheet="${esc(g.sheet)}"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>
-  <p class="hint">表の欄はExcelと同じように扱えます：Excelの範囲をコピーして左上の欄に貼り付けると、まとめて入ります。Enterで下の欄へ移ります。該当がない欄は「-」と入力してください。</p>`;
+  <p class="hint">表の欄はExcelと同じように扱えます：Excelの範囲をコピーして左上の欄に貼り付けると、まとめて入ります。Enterで下の欄へ移ります。該当がない欄は「-」と入力してください。</p>
+  ${hasOrig ? '<p class="hint" data-testid="orig-hint">欄の中の<span class="orig-ph">薄い文字</span>は、原票に元からある記入例・既存値です（入力済みではありません。回答しなければ、原票のままです）。</p>' : ''}`;
 }
 
 function returnsHtml(st, dept, locked) {

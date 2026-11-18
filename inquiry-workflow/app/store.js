@@ -83,5 +83,10 @@ export function layout() {
   return S.layout;
 }
 
+/** 項目のセルに、原票に元からある内容（なければ ''）。参照表示用で、回答には使わない。 */
+export function originalText(item) {
+  return layout()?.byName[item.sheet]?.cells.get(item.cell)?.display ?? '';
+}
+
 /** 共通リンク（照会ごとに1本。課別には作らない）。 */
 export const answerUrl = () => `${location.href.split('#')[0]}#answer`;

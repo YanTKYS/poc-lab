@@ -84,6 +84,14 @@ table.grid { border-collapse: collapse; table-layout: fixed; font-size: .82rem; 
 .fxm { font-size: .76rem; border: 1px dashed #999; padding: 0 4px; border-radius: 4px; background: #fff; }
 .opt { font-size: .72rem; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; margin-left: 4px; background: #fff; }
 .legend { font-size: .82rem; color: var(--muted); }
+/* 原票に元からある内容（ひな形文字・記入例）。回答ではないので、控えめな見た目にする */
+.orig { display: inline-block; max-width: 100%; vertical-align: bottom; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; border: 1px dotted #8a8f98; border-radius: 3px; background: #fff; color: #4a4f57; font-size: .76rem; line-height: 1.5; }
+.orig-ref { margin: 2px 0 4px; padding: 4px 10px; border-left: 4px solid #b3b8c2; background: #f1f2f5; font-size: .88rem; }
+.orig-ref .orig-label { display: inline-block; margin-right: 8px; color: var(--muted); font-size: .78rem; font-weight: 700; }
+.orig-ref .orig-val { white-space: pre-wrap; color: #33373d; }
+.orig-ref small { display: block; color: var(--muted); font-size: .76rem; }
+.orig-ph { color: #8a8f98; font-style: italic; }
+.tbl-in td input::placeholder { color: #9a9fa8; font-style: italic; opacity: 1; }
 .dept-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .chip-btn { text-align: left; border-left-width: 8px; }
 .chip-btn.c-shimin { border-left-color: #5b9bf0; } .chip-btn.c-zeimu { border-left-color: #e8963a; } .chip-btn.c-fukushi { border-left-color: #4ea860; }

@@ -53,8 +53,10 @@ export function gridHtml(sheet, opt = {}) {
       let title = '';
       if (item) {
         cls.push('in', item.depts.length > 1 ? 'd-multi' : `d-${item.depts[0] ?? 'none'}`);
-        body = ownerChip(item) + (item.optional ? '<span class="opt">任意</span>' : '');
-        title = `${item.label}（${M.TYPE_LABEL[item.type]}）`;
+        // 担当課のチップと並べて、原票に元からある内容（「　年　月」等）も出す。割り当てても原票は書き換わらない
+        const orig = cell?.display ?? '';
+        body = ownerChip(item) + (item.optional ? '<span class="opt">任意</span>' : '') + (orig ? `<span class="orig">${esc(orig)}</span>` : '');
+        title = `${item.label}（${M.TYPE_LABEL[item.type]}）${orig ? `／原票の内容：${orig}` : ''}`;
       } else if (cell?.isFormula) {
         cls.push('fx');
         body = '<span class="fxm">数式</span>';
@@ -74,7 +76,8 @@ export function gridHtml(sheet, opt = {}) {
 export const legendHtml = () => `<p class="legend">
   ${M.DEPTS.filter((d) => d.id !== M.COORDINATOR).map((d) => `<span class="chip c-${d.id}">${esc(d.short)}</span>`).join('')}
   <span class="chip c-multi">複数課</span><span class="chip c-none">未割当</span>＝入力セル（未割当ては自課で回答）
-  <span class="fxm">数式</span>＝数式セル（書き込まない）</p>`;
+  <span class="fxm">数式</span>＝数式セル（書き込まない）
+  <span class="orig">原票の内容</span>＝原票に元からある文字・数値（割り当てても変わらず、回答がなければそのまま残ります）</p>`;
 
 export const dialogHtml = (title, body, foot = '') => `<form method="dialog" class="dlg">
   <header><h2>${esc(title)}</h2><button type="button" class="link" data-act="close-dialog" aria-label="閉じる">閉じる ✕</button></header>
