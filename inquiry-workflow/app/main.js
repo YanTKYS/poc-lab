@@ -195,14 +195,27 @@ const actions = {
   optional: (el) => { M.setOptional(S.state, selectedKeys(), el.dataset.v === '1'); commit(el.dataset.v === '1' ? '任意項目にする' : '必須に戻す'); },
   'remove-input': () => { const k = selectedKeys(); M.removeItems(S.state, k); commit(`入力不要にする ${k.length}セル`); },
   'add-input': () => { const n = addSelectedAsInput(); commit(`入力セルにする ${n}セル`); },
-  'sample-assign': () => { const n = applySampleAssignment(S.state); commit(`例の割当てを適用（${n}操作）`); },
+  'sample-assign': () => {
+    // 戻り値は「設定した入力セル数」と「一括割当ての処理（範囲）の数」。どちらも人の操作回数ではない
+    const { cells, ranges } = applySampleAssignment(S.state);
+    commit(`例の割当てを適用（${cells}セル・${ranges}範囲）`);
+  },
   open: () => { S.state.inquiry.opened = true; commit('回答の受付を始める'); },
-  copy: (el) => {
+  copy: async (el) => {
     const url = answerUrl();
     const text = el.dataset.copy === 'request' ? M.requestText(S.state, url)
       : el.dataset.copy === 'reminder' ? M.reminderText(S.state, url).text
         : M.returnText(S.state, el.dataset.dept, url);
-    copyText(text);
+    // クリップボードに入ったことを確かめてから成功と表示する（失敗したのに「コピーしました」と見せない）
+    if (!(await copyText(text))) {
+      // 催促文・差戻しの連絡文は画面に文面が出ていないので、手動でコピーできるよう文面を表示する
+      openDialog('コピーできませんでした', `<p><strong>コピーできませんでした。</strong>下に表示した文面を手動で選択してコピーしてください（デモ専用の文面です）。</p>
+        <textarea class="copytext" id="manual-copy" readonly rows="14">${esc(text)}</textarea>`,
+      '<button type="button" class="primary" data-act="close-dialog">閉じる</button>');
+      dlg.querySelector('#manual-copy')?.select();
+      return;
+    }
+    // 「コピーした」という記録は、成功したときだけ残す
     log({ request: '依頼文をコピー', reminder: '催促文をコピー', return: '差戻しの連絡文をコピー' }[el.dataset.copy]);
     persist();
     toast('コピーしました（デモ専用の文面です。実際の依頼・連絡には使えません）');
@@ -420,18 +433,25 @@ async function readFile(file) {
   register(new Uint8Array(await file.arrayBuffer()), file.name, file.name.replace(/\.xlsx$/i, ''));
 }
 
-function copyText(text) {
+/** クリップボードへコピーし、入ったかどうかを返す（Clipboard API が拒否されたら旧方式を試す）。 */
+async function copyText(text) {
   if (navigator.clipboard?.writeText) {
-    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-  } else fallbackCopy(text);
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch { /* 許可されない・フォーカスがない等。旧方式を試す */ }
+  }
+  return fallbackCopy(text);
 }
 function fallbackCopy(text) {
   const ta = document.createElement('textarea');
   ta.value = text;
   document.body.append(ta);
   ta.select();
-  try { document.execCommand('copy'); } catch { /* 手でコピーしてもらう */ }
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch { ok = false; }
   ta.remove();
+  return ok;
 }
 
 function download(blob, name) {

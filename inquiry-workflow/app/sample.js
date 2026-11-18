@@ -44,12 +44,17 @@ export function rangeKeys(state, sheet, range) {
   return keys;
 }
 
-/** 例の割当てを適用する。範囲ごとに1操作として数える（9操作）。 */
+/**
+ * 例の割当てを適用する。
+ * @returns {{cells:number, ranges:number}} cells＝割り当てた入力セルの数、ranges＝行った一括割当ての処理（範囲）の数。
+ *   画面の「割当て処理（回）」は ranges だけ増える。cells・ranges は人が行った操作の回数ではない
+ */
 export function applySampleAssignment(state) {
-  let n = 0;
-  for (const a of SAMPLE_ASSIGN) n += assign(state, rangeKeys(state, a.sheet, a.range), a.depts);
+  const before = state.counters.assignOps;
+  let cells = 0;
+  for (const a of SAMPLE_ASSIGN) cells += assign(state, rangeKeys(state, a.sheet, a.range), a.depts);
   for (const o of SAMPLE_OPTIONAL) setOptional(state, rangeKeys(state, o.sheet, o.range), true);
-  return n;
+  return { cells, ranges: state.counters.assignOps - before };
 }
 
 /**

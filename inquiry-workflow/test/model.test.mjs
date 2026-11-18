@@ -45,8 +45,8 @@ for (const id of FIXTURES) {
   test(`${id}: 割当て→回答→提出→差戻し→再提出→集約→出力まで通り、原票の様式を保つ`, () => {
     const { bytes, state } = fresh(id);
 
-    // 割当て：62項目を9操作で
-    applySampleAssignment(state);
+    // 割当て：62項目を9回の一括割当て処理で（入力セル数と処理の回数は別。ログには両方を区別して書く）
+    assert.deepEqual(applySampleAssignment(state), { cells: 56, ranges: 9 });
     assert.equal(state.counters.assignOps, 9);
     const count = (d) => M.itemsOf(state, d).length;
     assert.deepEqual(['dx', 'shimin', 'zeimu', 'fukushi', 'kosodate', 'shisetsu'].map(count), [6, 10, 6, 15, 9, 21]);
