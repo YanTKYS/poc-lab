@@ -24,7 +24,7 @@ export function inspect(bytes, zip) {
   const wb = readWorkbook(files);
   const sheets = [];
   for (const sh of wb.sheets) {
-    const info = { name: sh.name, path: sh.path, supported: false };
+    const info = { name: sh.name, path: sh.path, supported: false, state: sh.state, hidden: sh.hidden };
     if (!sh.isWorksheet || !files[sh.path]) {
       info.reason = 'ワークシートではありません（グラフシート等）';
     } else {
@@ -91,6 +91,8 @@ export function patch(bytes, writes, zip, options = {}) {
     if (!sh) { errors.push(err('E_SHEET', w, 'シートがありません')); continue; }
     const info = ins.sheets.find((s) => s.name === w.sheet);
     if (!info.supported) { errors.push(err('E_XML_SHAPE', w, info.reason)); continue; }
+    // 非表示シートは回答の対象にしない。原票の複製に、元のまま残す
+    if (info.hidden) { errors.push(err('E_HIDDEN', w, `非表示シート（${info.state}）には書き込めません`)); continue; }
     const pos = parseRef(String(w.cell));
     if (!pos) { errors.push(err('E_REF', w, 'セル番地が不正です')); continue; }
     if (!bySheet.has(sh.path)) {
@@ -201,12 +203,13 @@ export function patch(bytes, writes, zip, options = {}) {
   }
 
   const wrote = opsByPath.size > 0;
-  // 値を1つでも書いたら、全シートの数式セルから古い計算結果（<v>）を取り除く。
-  // <f>（数式）は変えない。別シートを参照する数式もあるので、書いていないシートも対象にする
+  // 値を1つでも書いたら、表示シートの数式セルから古い計算結果（<v>）を取り除く。
+  // <f>（数式）は変えない。別シートを参照する数式もあるので、書いていないシートも対象にする。
+  // ただし非表示シートは、内容・数式・保存済みの計算結果とも元のまま（1バイトも変えない）
   if (wrote && formulaResults === 'clear') {
     let cleared = 0;
     for (const info of ins.sheets) {
-      if (!info.supported) continue;
+      if (!info.supported || info.hidden) continue;
       if (!bySheet.has(info.path)) {
         const xml = toText(files[info.path]);
         bySheet.set(info.path, { name: info.name, xml, scan: scanSheet(xml), edits: [] });

@@ -99,10 +99,14 @@ export function readWorkbook(files) {
   const sheets = [];
   for (const m of wb.matchAll(/<sheet\b[^>]*>/g)) {
     const rel = rels[attr(m[0], 'r:id')];
+    // 表示状態：visible（属性の省略時も同じ）／hidden／veryHidden。visible 以外はすべて「非表示」として扱う
+    const state = attr(m[0], 'state') ?? 'visible';
     sheets.push({
       name: attr(m[0], 'name'),
       path: rel ? resolveTarget('xl/', rel.target) : null,
       isWorksheet: !!rel && /\/worksheet$/.test(rel.type),
+      state,
+      hidden: state !== 'visible',
     });
   }
   const date1904 = /^(1|true)$/.test(attr(/<workbookPr\b[^>]*>/.exec(wb)?.[0] ?? '', 'date1904') ?? '');

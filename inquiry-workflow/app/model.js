@@ -73,6 +73,21 @@ export function removeItems(state, keys) {
     delete state.finals[k];
   }
 }
+/**
+ * 表示されているシート以外（非表示・存在しないシート）にある項目を、対象から外す。
+ * 非表示シートの対応前に登録した状態（ブラウザに保存済み）を読み込んだときに使う。
+ * 項目に結び付いた回答・確定値・差戻し・修正の記録も一緒に外す。外した項目数を返す。
+ */
+export function removeItemsOutsideSheets(state, visibleSheetNames) {
+  const visible = new Set(visibleSheetNames);
+  const keys = Object.values(state.items).filter((it) => !visible.has(it.sheet)).map((it) => it.key);
+  if (!keys.length) return 0;
+  removeItems(state, keys);
+  const gone = new Set(keys);
+  state.returns = state.returns.filter((r) => !gone.has(r.key));
+  state.edits = state.edits.filter((e) => !gone.has(e.key));
+  return keys.length;
+}
 export function setOptional(state, keys, optional) {
   for (const k of keys) if (state.items[k]) state.items[k].optional = optional;
 }

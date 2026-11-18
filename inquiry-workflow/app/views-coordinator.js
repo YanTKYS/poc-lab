@@ -53,10 +53,18 @@ export function selectedRefs() {
 export const selectedKeys = () => selectedRefs().map((ref) => M.keyOf(S.ui.sheet, ref)).filter((k) => S.state.items[k]);
 const selLabel = (sel) => (sel.c1 === sel.c2 && sel.r1 === sel.r2 ? refOf(sel.c1, sel.r1) : `${refOf(sel.c1, sel.r1)}:${refOf(sel.c2, sel.r2)}`);
 
+/** 回答・割当ての対象にしていない非表示シートの案内（なければ空）。 */
+function hiddenNoteHtml() {
+  const hs = layout().hiddenSheets;
+  if (!hs.length) return '';
+  const label = (h) => `「${esc(h.name)}」（${h.state === 'hidden' ? '非表示' : '非表示 veryHidden'}）`;
+  return `<p class="hint" data-testid="hidden-note"><strong>非表示のシートは、回答・割当ての対象にしていません：</strong>${hs.map(label).join('、')}。確認用Excelには、これらのシートも内容・数式・書式・表示状態を変えずに残ります。</p>`;
+}
+
 function assignHtml() {
   const st = S.state;
   const L = layout();
-  if (!S.ui.sheet || !L.byName[S.ui.sheet]) S.ui.sheet = (L.sheets.find((s) => M.itemList(st).some((it) => it.sheet === s.name)) ?? L.sheets[0]).name;
+  if (!S.ui.sheet || !L.sheets.some((x) => x.name === S.ui.sheet)) S.ui.sheet = (L.sheets.find((s) => M.itemList(st).some((it) => it.sheet === s.name)) ?? L.sheets[0]).name;
   const sheet = L.byName[S.ui.sheet];
   const items = M.itemList(st);
   const unassigned = items.filter((it) => !it.depts.length);
@@ -70,6 +78,7 @@ function assignHtml() {
         const c = counts(s.name);
         return `<button type="button" role="tab" data-act="sheet" data-sheet="${esc(s.name)}" aria-selected="${s.name === sheet.name}">${esc(s.name)}<small>${c.all ? `入力${c.all}${c.un ? `・未割当${c.un}` : ''}` : '入力なし'}</small></button>`;
       }).join('')}</div>
+      ${hiddenNoteHtml()}
       <p class="hint">セルをドラッグ（または Shift＋クリック）で範囲を選び、右の担当課を押します。行番号・列名・左上の角を押すと、行・列・シート全体を選べます。</p>
       <div class="range-row"><label for="range-input">範囲を番地で指定</label><input type="text" id="range-input" placeholder="例 C5:D8" autocomplete="off" size="10"><button type="button" data-act="select-range">選択</button></div>
       <div class="grid-wrap" id="assign-grid">${gridHtml(sheet, { state: st, assign: true })}</div>
@@ -267,6 +276,7 @@ function outputHtml() {
   const o = S.ui.output;
   return `<h2>確認用Excel（ドラフト）：出力前の確認</h2>
   <div class="alert warn" data-testid="demo-notice"><strong>デモの確認用ファイルです。正式提出には使用しないでください。</strong> Microsoft Excel実機での開封・再計算・保存、および提出先での受理は未確認です（出力方式は条件付き採用：<a href="https://github.com/YanTKYS/poc-lab/blob/main/inquiry-workflow/EXCEL.md" rel="noopener">検証記録</a>）。</div>
+  ${hiddenNoteHtml()}
   <div class="stat-row wide">
     <div><b data-testid="plan-writes">${plan.writes.length}</b><span>書き込むセル（全 ${total}）</span></div>
     <div><b data-testid="plan-pending">${plan.pending.length}</b><span>書き込まない（未提出・未回答・未確定など）</span></div>

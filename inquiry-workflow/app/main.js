@@ -88,11 +88,15 @@ function register(bytes, name, title) {
     return render();
   }
   const L = readLayout(zip.unzip(bytes));
+  if (!L.sheets.length) {
+    S.ui.registerError = [`表示されているシートがありません（すべて非表示：${L.hiddenSheets.map((h) => h.name).join('、')}）。非表示のシートは回答・割当ての対象にしないため、登録できません`];
+    return render();
+  }
   M.registerSource(S.state, { title, sourceName: name, sourceB64: bytesToB64(bytes), descriptions: describeCandidates(L) });
   S.layout = L;
   Object.assign(S.ui, { registerError: null, tab: 'assign', sheet: null, sel: null, output: null });
   if (bad.length) toast(`扱えないシートがあります：${bad.join('、')}`);
-  commit(`原票を登録（入力セル候補 ${Object.keys(S.state.items).length}）`);
+  commit(`原票を登録（入力セル候補 ${Object.keys(S.state.items).length}、非表示シート ${L.hiddenSheets.length}）`);
 }
 
 async function loadSample() {
@@ -482,7 +486,14 @@ function exportXlsx() {
 }
 
 // ---- 起動 -----------------------------------------------------------------
-if (load() && S.state.inquiry) layout();
+if (load() && S.state.inquiry) {
+  // 非表示シートの対応前に登録した状態が保存されていたら、非表示シートの項目を対象から外す
+  const removed = M.removeItemsOutsideSheets(S.state, layout().sheets.map((s) => s.name));
+  if (removed) {
+    persist();
+    setTimeout(() => toast(`非表示シートにあった ${removed}項目を、回答・割当ての対象から外しました`), 0);
+  }
+}
 if (location.hash === '#answer') S.ui.role = 'answer';
 window.addEventListener('hashchange', () => { if (location.hash === '#answer') { S.ui.role = 'answer'; render(); } });
 render();

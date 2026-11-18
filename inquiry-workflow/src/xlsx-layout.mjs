@@ -48,7 +48,10 @@ function readValidations(xml) {
 
 /**
  * @param {Record<string, Uint8Array>} files 展開済みの原票
- * @returns {{sheets: object[], byName: Record<string, object>}}
+ * @returns {{sheets: object[], hiddenSheets: {name:string, state:string}[], byName: Record<string, object>}}
+ *   sheets＝表示されているシートだけ（回答項目の抽出・割当て画面の対象）。
+ *   hiddenSheets＝非表示（hidden・veryHidden）のシート。対象にしないが、原票の複製にはそのまま残る。
+ *   byName＝非表示シートも含む。他のシートの入力規則が、非表示シートのセル範囲を選択肢の参照元にしていることがあるため
  */
 export function readLayout(files) {
   const wb = readWorkbook(files);
@@ -56,11 +59,17 @@ export function readLayout(files) {
   const xfs = readCellXfs(stylesXml);
   const fills = readFills(stylesXml);
   const shared = files['xl/sharedStrings.xml'] ? readSharedStrings(toText(files['xl/sharedStrings.xml'])) : [];
-  const sheets = [];
+  const all = [];
   for (const sh of wb.sheets) {
     if (!sh.isWorksheet || !files[sh.path]) continue;
     const xml = toText(files[sh.path]);
-    const scan = scanSheet(xml);
+    let scan;
+    try {
+      scan = scanSheet(xml);
+    } catch (e) {
+      if (sh.hidden) continue; // 非表示シートが読めなくても、表示シートの処理は続ける（選択肢の参照元に使えないだけ）
+      throw e;
+    }
     const cells = new Map();
     let maxCol = 0;
     let maxRow = 0;
@@ -91,15 +100,19 @@ export function readLayout(files) {
       const w = Number(attr(m[0], 'width'));
       for (let c = Number(attr(m[0], 'min')); c <= Math.min(Number(attr(m[0], 'max')), 200); c++) if (w) colWidths[c] = w;
     }
-    sheets.push({
-      name: sh.name, path: sh.path, isProtected: scan.isProtected,
+    all.push({
+      name: sh.name, path: sh.path, state: sh.state, hidden: sh.hidden, isProtected: scan.isProtected,
       cells, merges: scan.merges, covered, colWidths, validations: readValidations(xml),
       maxCol: scan.dimension ? Math.max(maxCol, scan.dimension.c2) : maxCol,
       maxRow: scan.dimension ? Math.max(maxRow, scan.dimension.r2) : maxRow,
     });
   }
-  const layout = { sheets, byName: Object.fromEntries(sheets.map((s) => [s.name, s])) };
-  for (const s of sheets) s.candidates = findCandidates(s);
+  const layout = {
+    sheets: all.filter((s) => !s.hidden),
+    hiddenSheets: all.filter((s) => s.hidden).map((s) => ({ name: s.name, state: s.state })),
+    byName: Object.fromEntries(all.map((s) => [s.name, s])),
+  };
+  for (const s of all) s.candidates = s.hidden ? new Map() : findCandidates(s); // 非表示シートからは入力セル候補を作らない
   return layout;
 }
 
