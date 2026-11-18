@@ -291,3 +291,81 @@ test('フッターに、操作の記録は評価用であり回答データの�
   await open(page);
   await expect(page.locator('#log-note')).toContainText('評価用の操作ログです。回答データの書き出し・復元・部署間の引継ぎには使えません');
 });
+
+// ---- コピーの成否（Issue #20）：クリップボードに入ったときだけ成功と表示・記録する ----
+const copiedLogs = (page) => page.evaluate(() => window.__poc.S.state.log.filter((l) => l.action.endsWith('をコピー')).map((l) => l.action));
+
+async function openRequestScreen(page) {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click();
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await tab(page, '② 依頼');
+  await page.getByRole('button', { name: '回答の受付を始める' }).click();
+}
+
+test('コピー成功：成功のメッセージを出し、「コピーした」記録を残す。クリップボードAPIが拒否されても旧方式で入れば成功', async ({ page }) => {
+  await openRequestScreen(page);
+  // Clipboard API が成功する場合
+  await page.evaluate(() => { window.__copied = null; navigator.clipboard.writeText = async (t) => { window.__copied = t; }; });
+  await page.getByRole('button', { name: '依頼文をコピー' }).click();
+  await expect(page.locator('#toast')).toContainText('コピーしました（デモ専用の文面です');
+  expect((await page.evaluate(() => window.__copied)).split('\n')[0]).toBe('【デモ専用・実際の依頼として送付禁止】');
+  expect(await copiedLogs(page)).toEqual(['依頼文をコピー']);
+  // Clipboard API は拒否されるが、旧方式（execCommand）で入る場合も成功
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new Error('denied'));
+    document.execCommand = (cmd) => cmd === 'copy';
+  });
+  await page.getByRole('button', { name: '依頼文をコピー' }).click();
+  await expect(page.locator('#toast')).toContainText('コピーしました');
+  await expect(page.locator('dialog')).toBeHidden();
+  expect(await copiedLogs(page)).toEqual(['依頼文をコピー', '依頼文をコピー']);
+});
+
+test('コピー失敗：成功と表示せず記録も残さず、文面を表示して手動コピーを案内する（依頼・催促・差戻しの3種類）', async ({ page }) => {
+  await openRequestScreen(page);
+  // 両方の方式が失敗する
+  await page.evaluate(() => {
+    navigator.clipboard.writeText = () => Promise.reject(new Error('denied'));
+    document.execCommand = () => false;
+  });
+  const failed = async (button, firstLines) => {
+    await button.click();
+    await expect(page.locator('dialog')).toContainText('コピーできませんでした');
+    await expect(page.locator('dialog')).toContainText('手動で選択してコピーしてください');
+    await expect(page.locator('#toast')).not.toContainText('コピーしました');
+    const shown = await page.locator('#manual-copy').inputValue();
+    expect(shown.split('\n')[0]).toBe('【デモ専用・実際の依頼として送付禁止】');
+    expect(shown).toContain(firstLines);
+    await page.getByRole('button', { name: '閉じる' }).last().click();
+    await expect(page.locator('dialog')).toBeHidden();
+  };
+  await failed(page.getByRole('button', { name: '依頼文をコピー' }), '関係各課 御中');
+  // 催促文（進捗画面。文面が画面に出ていないので、失敗時に表示される）
+  await tab(page, '③ 進捗・集約');
+  await failed(page.getByRole('button', { name: /催促文をコピー/ }), '回答がまだ提出されていません');
+  // 差戻しの連絡文：施設管理課まで提出させ、1項目を差し戻す
+  await page.evaluate(() => {
+    const { S, M } = window.__poc;
+    for (const it of M.itemsOf(S.state, 'shisetsu')) M.setAnswer(S.state, it.key, 'shisetsu', it.type === 'text' ? '架空' : '1');
+    M.submit(S.state, 'shisetsu');
+    M.returnItem(S.state, '施設別実績!C5', 'shisetsu', '確認してください');
+  });
+  await tab(page, '② 依頼');
+  await tab(page, '③ 進捗・集約');
+  await failed(page.getByRole('button', { name: /差戻しの連絡文をコピー/ }), '確認してください');
+  expect(await copiedLogs(page)).toEqual([]); // 失敗したコピーは1件も記録しない
+});
+
+// ---- デモ割当てのログ（Issue #20）：入力セル数・範囲数・人の操作回数を混同しない ----
+test('デモ割当てのログは「56セル・9範囲」と記録し、「56操作」とは書かない', async ({ page }) => {
+  await open(page);
+  await page.getByRole('button', { name: '架空の原票を読み込む' }).click();
+  await page.locator('summary', { hasText: 'デモ用ショートカット' }).click();
+  await page.getByRole('button', { name: '例の割当てを適用する' }).click();
+  await expect(page.getByTestId('assign-ops')).toHaveText('9'); // 割当て処理（回）
+  const actions = await page.evaluate(() => window.__poc.S.state.log.map((l) => l.action));
+  expect(actions.at(-1)).toBe('例の割当てを適用（56セル・9範囲）');
+  expect(actions.join('\n')).not.toContain('56操作');
+});
