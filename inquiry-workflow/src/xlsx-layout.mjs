@@ -7,7 +7,7 @@
 // Node・ブラウザ共通（依存なし）。
 
 import {
-  toText, attr, decodeXml, parseRef, parseRange, inRange,
+  toText, attr, decodeXml, parseRef, parseRange, inRange, serialToDate,
   readWorkbook, readCellXfs, scanSheet, readSharedStrings, cellValue,
 } from './ooxml.mjs';
 
@@ -17,6 +17,19 @@ export const colName = (n) => {
   return s;
 };
 export const refOf = (col, row) => `${colName(col)}${row}`;
+
+/**
+ * 原票のセルに元からある内容を、画面に出す文字列にする（空欄は ''）。「　年　月」のようなひな形文字や、記入例の数値など。
+ * 参照用の表示であり、回答としては扱わない。日付は YYYY-MM-DD、％は 12.5% の形にする。
+ */
+export function originalDisplay(v, xf, date1904 = false) {
+  if (v.kind === 'string') return v.value ?? '';
+  if (v.kind === 'bool') return v.value ? 'TRUE' : 'FALSE';
+  if (v.kind !== 'number') return '';
+  if (xf?.isDate) return serialToDate(v.value, date1904);
+  if (xf?.isPercent) return `${+(v.value * 100).toFixed(10)}%`;
+  return String(v.value);
+}
 
 /** styles.xml の塗りつぶしを順に読み、単色なら '#RRGGBB'（色が特定できなければ 'solid'）、なければ null。 */
 function readFills(stylesXml) {
@@ -82,6 +95,7 @@ export function readLayout(files) {
         kind: v.kind, value: v.value, isFormula: c.hasFormula, isEmpty: c.isEmpty,
         locked: xf?.locked ?? true, fill: xf ? fills[xf.fillId] ?? null : null,
         isDate: !!xf?.isDate, isText: !!xf?.isText, isPercent: !!xf?.isPercent, isNumber: !!xf?.isNumber,
+        display: c.hasFormula ? '' : originalDisplay(v, xf, wb.date1904), // 原票の元の内容（参照表示用。回答ではない）
       });
       maxCol = Math.max(maxCol, pos.col);
       maxRow = Math.max(maxRow, pos.row);

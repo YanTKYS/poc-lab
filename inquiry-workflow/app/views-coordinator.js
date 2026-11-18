@@ -1,7 +1,7 @@
 // とりまとめ部署の画面：原票の登録、① 割当て、② 依頼、③ 進捗・集約、④ 出力。
 import { describeCell, refOf, colName, REASON_LABEL } from '../lib/xlsx-layout.js';
 import * as M from './model.js';
-import { S, layout, answerUrl } from './store.js';
+import { S, layout, answerUrl, originalText } from './store.js';
 import { esc, fmtTime, statusBadge, ownerChip, gridHtml, legendHtml, answerText } from './ui.js';
 
 const TABS = [['assign', '① 割当て'], ['request', '② 依頼'], ['progress', '③ 進捗・集約'], ['output', '④ 確認用Excel（ドラフト）']];
@@ -131,8 +131,9 @@ export function selPanelHtml() {
     <label class="fld">見出し<input type="text" data-edit="label" value="${esc(one.label)}"></label>
     <label class="fld">型<select data-edit="type">${Object.entries(M.TYPE_LABEL).filter(([t]) => t !== 'choice' || one.options).map(([t, l]) => `<option value="${t}"${t === one.type ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
     <label class="fld">補足・記入例（任意）<input type="text" data-edit="note" value="${esc(one.note)}" placeholder="例：4月1日時点の件数"></label>
+    ${originalText(one) ? `<p class="hint" data-testid="sel-orig">原票の内容：<span class="orig">${esc(originalText(one))}</span>（割り当てても変わりません。回答がなければ、出力でもそのまま残ります）</p>` : ''}
     <p class="hint">担当：${ownerChip(one)}${one.optional ? '　任意項目' : ''}　候補の根拠：${one.reasons.map((r) => REASON_LABEL[r] ?? '手動で追加').join('・') || '手動で追加'}${one.options ? `<br>選択肢：${esc(one.options.join('／'))}` : ''}</p>`
-    : keys.length ? `<h3>見出し（自動抽出）</h3><ul class="labels">${keys.slice(0, 4).map((k) => `<li>${esc(st.items[k].cell)}　${esc(st.items[k].label)}</li>`).join('')}${keys.length > 4 ? `<li>ほか ${keys.length - 4} 項目</li>` : ''}</ul><p class="hint">1セルだけ選ぶと、見出し・型・補足を直せます。</p>` : ''}`;
+    : keys.length ? `<h3>見出し（自動抽出）</h3><ul class="labels">${keys.slice(0, 4).map((k) => `<li>${esc(st.items[k].cell)}　${esc(st.items[k].label)}${originalText(st.items[k]) ? `　<span class="orig">${esc(originalText(st.items[k]))}</span>` : ''}</li>`).join('')}${keys.length > 4 ? `<li>ほか ${keys.length - 4} 項目</li>` : ''}</ul><p class="hint">1セルだけ選ぶと、見出し・型・補足を直せます。</p>` : ''}`;
 }
 
 export function addSelectedAsInput() {
@@ -284,8 +285,8 @@ function outputHtml() {
     <div><b>${plan.skippedOptional}</b><span>任意で空欄</span></div>
   </div>
   <p data-testid="plan-summary"><strong>書き込む ${plan.writes.length}件／書き込まない ${plan.pending.length}件（未提出・未回答・未確定など）／注意 ${plan.cautions.length}件。</strong>${plan.skippedOptional ? `任意項目で空欄の ${plan.skippedOptional}件は、別に数えています（空欄のまま）。` : ''}出力する前に、下の「書き込まない項目」と「注意」を確認してください。</p>
-  ${plan.pending.length ? `<h3>書き込まない項目（原票のセルはそのまま残ります）</h3><table class="tbl"><thead><tr><th>位置</th><th>見出し</th><th>理由</th></tr></thead><tbody>
-    ${plan.pending.map((p) => `<tr><td>${esc(p.item.sheet)} ${esc(p.item.cell)}</td><td>${esc(p.item.label)}</td><td>${esc(p.why)}</td></tr>`).join('')}</tbody></table>` : ''}
+  ${plan.pending.length ? `<h3>書き込まない項目（原票のセルはそのまま残ります）</h3><table class="tbl"><thead><tr><th>位置</th><th>見出し</th><th>理由</th><th>原票の内容（そのまま残る）</th></tr></thead><tbody>
+    ${plan.pending.map((p) => `<tr><td>${esc(p.item.sheet)} ${esc(p.item.cell)}</td><td>${esc(p.item.label)}</td><td>${esc(p.why)}</td><td>${originalText(p.item) ? `<span class="orig">${esc(originalText(p.item))}</span>` : '<span class="muted">（空欄）</span>'}</td></tr>`).join('')}</tbody></table>` : ''}
   ${plan.cautions.length ? `<h3>注意</h3><ul>${plan.cautions.map((c) => `<li>${esc(c.item.sheet)} ${esc(c.item.cell)}　${esc(c.item.label)}：${esc(c.why)}</li>`).join('')}</ul>` : ''}
   <label class="check"><input type="checkbox" id="na-text"${st.inquiry.naAsText ? ' checked' : ''}> 文章の項目の「該当なし」は、文言「該当なし」として書く（外すと空欄。数値・日付・選択の項目は常に空欄）</label>
   <details${plan.writes.length && plan.writes.length <= 12 ? ' open' : ''}><summary>書き込む内容の一覧（${plan.rows.length}セル）</summary>
